@@ -41,13 +41,8 @@
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        /* 二维码容器样式 */
         #qrcode img { display: block; margin: 0 auto; border: 4px solid white; border-radius: 4px; }
-        
-        /* 文字发光特效 */
-        .neon-text {
-            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-        }
+        .neon-text { text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
     </style>
 </head>
 <body class="text-gray-300 min-h-screen pb-20">
@@ -63,7 +58,6 @@
                         </svg>
                     </div>
                 </div>
-                
                 <div>
                     <h1 class="font-black text-xl text-white tracking-widest uppercase italic">
                         SHADOW <span class="text-emerald-500 neon-text">NEXUS</span>
@@ -74,7 +68,6 @@
                     </div>
                 </div>
             </div>
-            
             <div class="flex gap-2">
                 <button onclick="fetchData()" class="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-400 hover:text-emerald-400 transition-colors group" title="刷新数据">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,7 +82,6 @@
     </div>
 
     <main class="max-w-7xl mx-auto px-4 pt-24">
-        
         <div class="flex items-center justify-between mb-6">
             <div class="glass-card px-5 py-2 rounded-full flex items-center gap-4 text-xs text-gray-400 shadow-lg">
                 <span class="flex items-center gap-2">
@@ -111,20 +103,22 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="grid"></div>
 
-        <div id="empty-state" class="hidden text-center py-20 text-gray-500">
-            NO SIGNAL DETECTED
-        </div>
+        <div id="empty-state" class="hidden text-center py-20 text-gray-500">NO SIGNAL DETECTED</div>
     </main>
 
     <textarea id="all-links" class="hidden"></textarea>
 
-    <div id="qr-modal" class="fixed inset-0 z-[100] hidden">
+    <div id="qr-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center px-4">
         <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" onclick="closeQR()"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#121212] border border-white/10 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 w-[300px] animate-fade-in">
-            <h3 class="text-white font-bold tracking-wider" id="qr-title">SCAN ACCESS CODE</h3>
-            <div id="qrcode" class="bg-white p-2 rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.1)]"></div>
-            <p class="text-xs text-gray-600 text-center max-w-full truncate px-2 font-mono" id="qr-link-preview"></p>
-            <button onclick="closeQR()" class="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 font-medium transition-colors">CLOSE</button>
+        <div class="relative bg-[#121212] border border-white/10 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 w-[320px] max-w-full animate-fade-in z-10">
+            <h3 class="text-white font-bold tracking-wider" id="qr-title">SCAN CODE</h3>
+            
+            <div id="qrcode" class="bg-white p-2 rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.1)] min-h-[180px] flex items-center justify-center"></div>
+            
+            <p class="text-xs text-gray-600 text-center w-full truncate px-2 font-mono" id="qr-link-preview"></p>
+            <button onclick="closeQR()" class="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 font-medium transition-colors border border-white/5">
+                CLOSE
+            </button>
         </div>
     </div>
 
@@ -136,7 +130,6 @@
     </div>
 
     <script>
-        // 国家代码映射表
         const countryMap = {
             'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国',
             'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国',
@@ -146,7 +139,6 @@
 
         const DATA_URL = './public/nodes.json';
 
-        // 初始化
         fetchData();
 
         function fetchData() {
@@ -155,19 +147,17 @@
             const empty = document.getElementById('empty-state');
             
             loading.classList.remove('hidden');
-            grid.innerHTML = ''; // 清空旧数据
+            grid.innerHTML = ''; 
             empty.classList.add('hidden');
 
             fetch(DATA_URL + '?t=' + new Date().getTime())
                 .then(res => res.json())
                 .then(data => {
                     loading.classList.add('hidden');
-                    
                     if (!data || data.length === 0) {
                         empty.classList.remove('hidden');
                         return;
                     }
-
                     updateStats(data);
                     renderNodes(data);
                 })
@@ -190,25 +180,18 @@
 
         function renderNodes(data) {
             const grid = document.getElementById('grid');
-            
             data.forEach((node, index) => {
                 const delay = Math.min(index * 30, 800);
                 const cnName = countryMap[node.country] || node.country || '境外';
                 
-                let speedColor = 'text-gray-500';
-                let barColor = 'bg-gray-700';
-                let glowClass = '';
-                
+                let speedColor = 'text-gray-500', barColor = 'bg-gray-700', glowClass = '';
                 if (node.speed > 5) { 
-                    speedColor = 'text-emerald-400'; 
-                    barColor = 'bg-emerald-500';
+                    speedColor = 'text-emerald-400'; barColor = 'bg-emerald-500'; 
                     glowClass = 'shadow-[0_0_8px_rgba(16,185,129,0.4)]'; 
                 } else if (node.speed > 2) { 
-                    speedColor = 'text-amber-400'; 
-                    barColor = 'bg-amber-500'; 
+                    speedColor = 'text-amber-400'; barColor = 'bg-amber-500'; 
                 } else if (node.speed > 0) { 
-                    speedColor = 'text-rose-400'; 
-                    barColor = 'bg-rose-500'; 
+                    speedColor = 'text-rose-400'; barColor = 'bg-rose-500'; 
                 }
 
                 const card = document.createElement('div');
@@ -230,15 +213,12 @@
                              <div class="font-mono text-xs font-bold ${speedColor}">${node.speed} <span class="text-[9px] opacity-70">MB/s</span></div>
                         </div>
                     </div>
-
                     <div class="text-[10px] text-gray-500 font-mono truncate mb-3 flex items-center gap-1.5 px-1 border-l-2 border-white/5 pl-2 ml-1">
                         ${node.host}:${node.port}
                     </div>
-
                     <div class="h-1 w-full bg-black/40 rounded-full overflow-hidden mb-auto">
                         <div class="h-full ${barColor} ${glowClass} transition-all duration-700" style="width: ${Math.min(node.speed * 8, 100)}%"></div>
                     </div>
-
                     <div class="grid grid-cols-4 gap-2 mt-3">
                         <button onclick="copyLink('${node.link}')" class="col-span-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] tracking-wide">
                             COPY LINK
@@ -260,16 +240,28 @@
         function showQR(link, title) {
             document.getElementById('qr-title').innerText = title;
             document.getElementById('qr-link-preview').innerText = link;
-            qrContainer.innerHTML = ''; 
-            new QRCode(qrContainer, {
-                text: link,
-                width: 180,
-                height: 180,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-            qrModal.classList.remove('hidden');
+            qrContainer.innerHTML = ''; // 清空
+            qrModal.classList.remove('hidden'); // 先显示模态框，确保 JS 能获取尺寸
+
+            try {
+                // 🔥 修复核心：降低容错率 (L) 并加上错误捕获
+                new QRCode(qrContainer, {
+                    text: link,
+                    width: 200,
+                    height: 200,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.L  // 修改这里：H -> L (Low)，这能容纳更多字符！
+                });
+            } catch (e) {
+                console.error("二维码生成失败", e);
+                qrContainer.innerHTML = `
+                    <div class="text-center py-8">
+                        <p class="text-red-500 font-bold text-sm mb-2">二维码生成失败</p>
+                        <p class="text-gray-500 text-xs">节点链接太长<br>请直接点击复制</p>
+                    </div>
+                `;
+            }
         }
 
         function closeQR() {
