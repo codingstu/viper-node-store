@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viper Node Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-6">
+    <div class="max-w-6xl mx-auto" id="app">
+        <h1 class="text-3xl font-bold text-emerald-400 mb-4">⚡ Viper Node Store</h1>
+        <p class="text-gray-400 mb-8">数据最后更新于: <span id="last-update">...</span></p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="grid">
+            </div>
+    </div>
+
+    <script>
+        fetch('./public/nodes.json')
+            .then(res => res.json())
+            .then(data => {
+                const grid = document.getElementById('grid');
+                if(data.length > 0) {
+                    document.getElementById('last-update').innerText = new Date(data[0].updated_at).toLocaleString();
+                }
+                
+                data.forEach(node => {
+                    const card = document.createElement('div');
+                    card.className = "bg-gray-800 p-4 rounded border border-gray-700";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-2xl">${node.country}</span>
+                            <span class="text-emerald-400 text-xs font-mono">${node.speed} MB/s</span>
+                        </div>
+                        <div class="font-bold text-sm truncate mb-2">${node.name}</div>
+                        <div class="bg-black/30 p-2 rounded text-xs text-gray-500 font-mono truncate mb-3">${node.link}</div>
+                        <button onclick="navigator.clipboard.writeText('${node.link}').then(()=>alert('已复制'))" 
+                            class="w-full bg-emerald-600/20 text-emerald-400 py-1 rounded text-xs hover:bg-emerald-600/30">复制链接</button>
+                    `;
+                    grid.appendChild(card);
+                });
+            });
+    </script>
+</body>
+</html>
