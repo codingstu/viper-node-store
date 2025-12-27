@@ -2,17 +2,21 @@ name: Update Nodes
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 每小时执行一次
-  workflow_dispatch:      # 允许手动触发
+    # ⏰ 核心设置：*/20 代表“每隔20分钟”
+    # 执行时间点举例：10:00, 10:20, 10:40, 11:00 ...
+    - cron: '*/20 * * * *'
+  
+  # 允许你手动点击 "Run workflow" 按钮立即触发
+  workflow_dispatch:
 
 jobs:
   update-nodes:
     runs-on: ubuntu-latest
     
-    # 🔥🔥🔥 核心修复：必须加上这几行权限设置 🔥🔥🔥
+    # ✅ 必须给予写权限，否则无法更新 json 文件
     permissions:
-      contents: write    # 允许 Action 写入代码 (git push)
-    
+      contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -27,6 +31,7 @@ jobs:
 
       - name: Run update script
         env:
+          # 读取你在 Settings -> Secrets 里配置的 API 地址
           SHADOW_VIPER_API: ${{ secrets.SHADOW_VIPER_API }}
         run: python update_nodes.py
 
@@ -35,5 +40,5 @@ jobs:
           git config --global user.name 'Shadow Viper Bot'
           git config --global user.email 'bot@shadowviper.com'
           git add public/nodes.json
-          # 只有当文件有变化时才提交，防止空提交报错
-          git diff --quiet && git diff --staged --quiet || (git commit -m "🔄 Auto update nodes $(date)" && git push)
+          # 只有当数据真的变了，才提交 Commit
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🔄 Update nodes (20min interval)" && git push)
