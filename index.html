@@ -187,16 +187,77 @@
         // ⚡️ 配置区域 (请填入你的 Supabase 信息)
         // ==========================================
         const SUPABASE_URL = 'https://hnlkwtkxbqiakeyienok.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME'; // ⚠️ 注意：填 Anon Key
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME';
         // ==========================================
 
-        // 🟢 修复：重命名为 supabaseClient，避免冲突
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 🟢 修复：确保 supabaseClient 初始化安全
+        let supabaseClient;
+        if (typeof supabase !== 'undefined') {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } else {
+            console.error('Supabase library not loaded!');
+            alert('System Error: Core library failed to load. Please check your connection.');
+        }
         
         const countryMap = {'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国', 'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国', 'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚', 'IN': '印度', 'BR': '巴西', 'UNK': '未知'};
 
         // 初始化
         fetchData();
+
+        // 🟢 新增：获取 VIP 状态
+        async function getVipStatus() {
+            if (!supabaseClient) return { user: null, isVip: false };
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) return { user: null, isVip: false };
+
+                const { data } = await supabaseClient.from('profiles').select('vip_until').eq('id', user.id).single();
+                const isVip = data?.vip_until && new Date(data.vip_until) > new Date();
+                return { user, isVip, vipDate: data?.vip_until };
+            } catch (e) {
+                console.error("Auth check failed:", e);
+                return { user: null, isVip: false };
+            }
+        }
+
+        // 🟢 新增：更新 UI 状态
+        function updateAuthUI(user, isVip, vipDate) {
+            const loginSection = document.getElementById('login-section');
+            const userSection = document.getElementById('user-section');
+            const authBtn = document.getElementById('auth-btn');
+            const statusText = document.getElementById('user-status-text');
+            const vipBadge = document.getElementById('vip-badge');
+            const subtitle = document.getElementById('auth-subtitle');
+
+            if (user) {
+                loginSection.classList.add('hidden');
+                userSection.classList.remove('hidden');
+                document.getElementById('current-email').innerText = user.email;
+
+                if (isVip) {
+                    statusText.innerText = "VIP MEMBER";
+                    statusText.className = "text-amber-400 font-mono";
+                    vipBadge.classList.remove('hidden');
+                    document.getElementById('vip-date').innerText = new Date(vipDate).toLocaleDateString();
+                    authBtn.innerText = "VIP";
+                    authBtn.className = "px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 rounded-lg text-xs font-mono font-bold text-amber-500 transition-colors";
+                } else {
+                    statusText.innerText = "FREE USER";
+                    statusText.className = "text-gray-400 font-mono";
+                    vipBadge.classList.add('hidden');
+                    document.getElementById('vip-date').innerText = "NOT ACTIVE";
+                    authBtn.innerText = "ACCOUNT";
+                }
+                subtitle.innerText = "WELCOME BACK, OPERATOR";
+            } else {
+                loginSection.classList.remove('hidden');
+                userSection.classList.add('hidden');
+                statusText.innerText = "GUEST (PREVIEW)";
+                vipBadge.classList.add('hidden');
+                authBtn.innerText = "LOGIN";
+                subtitle.innerText = "IDENTIFY YOURSELF";
+            }
+        }
 
         // 核心：获取数据 (Supabase 版)
         async function fetchData() {
@@ -209,7 +270,13 @@
             empty.classList.add('hidden');
 
             try {
-                // 🟢 使用 supabaseClient
+                if (!supabaseClient) throw new Error("Supabase client not initialized");
+
+                // 1. 先检查用户状态
+                const { user, isVip, vipDate } = await getVipStatus();
+                updateAuthUI(user, isVip, vipDate);
+
+                // 2. 获取数据
                 const { data, error } = await supabaseClient
                     .from('nodes')
                     .select('content')
@@ -220,16 +287,20 @@
                 if (error) throw error;
                 
                 // 提取 JSON 内容
-                const nodes = data ? data.map(item => item.content) : [];
+                let nodes = data ? data.map(item => item.content) : [];
                 
                 if (nodes.length === 0) {
                     empty.classList.remove('hidden');
                     return;
                 }
+
+                // 🟢 修复：非 VIP 只显示 20 个
+                if (!isVip) {
+                    nodes = nodes.slice(0, 20);
+                }
                 
                 updateStats(nodes);
                 renderNodes(nodes);
-                checkUserStatus(); // 同步检查用户状态
 
             } catch (err) {
                 console.error(err);
@@ -303,82 +374,55 @@
         // 🔐 认证与卡密逻辑
         // ==========================================
 
+        // 兼容旧调用
         async function checkUserStatus() {
-            // 🟢 使用 supabaseClient
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            const loginSection = document.getElementById('login-section');
-            const userSection = document.getElementById('user-section');
-            const authBtn = document.getElementById('auth-btn');
-            const statusText = document.getElementById('user-status-text');
-            const vipBadge = document.getElementById('vip-badge');
-            const subtitle = document.getElementById('auth-subtitle');
-
-            if (user) {
-                loginSection.classList.add('hidden');
-                userSection.classList.remove('hidden');
-                document.getElementById('current-email').innerText = user.email;
-                
-                // 🟢 使用 supabaseClient
-                const { data } = await supabaseClient.from('profiles').select('vip_until').eq('id', user.id).single();
-                const isVip = data?.vip_until && new Date(data.vip_until) > new Date();
-                
-                if (isVip) {
-                    statusText.innerText = "VIP MEMBER";
-                    statusText.className = "text-amber-400 font-mono";
-                    vipBadge.classList.remove('hidden');
-                    document.getElementById('vip-date').innerText = new Date(data.vip_until).toLocaleDateString();
-                    authBtn.innerText = "VIP";
-                    authBtn.className = "px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 rounded-lg text-xs font-mono font-bold text-amber-500 transition-colors";
-                } else {
-                    statusText.innerText = "FREE USER";
-                    statusText.className = "text-gray-400 font-mono";
-                    vipBadge.classList.add('hidden');
-                    document.getElementById('vip-date').innerText = "NOT ACTIVE";
-                    authBtn.innerText = "ACCOUNT";
-                }
-                subtitle.innerText = "WELCOME BACK, OPERATOR";
-            } else {
-                loginSection.classList.remove('hidden');
-                userSection.classList.add('hidden');
-                statusText.innerText = "GUEST (PREVIEW)";
-                vipBadge.classList.add('hidden');
-                authBtn.innerText = "LOGIN";
-                subtitle.innerText = "IDENTIFY YOURSELF";
-            }
+            const { user, isVip, vipDate } = await getVipStatus();
+            updateAuthUI(user, isVip, vipDate);
         }
 
         async function handleLogin() {
+            console.log("Login attempt...");
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             if(!email || !password) return showToast("MISSING CREDENTIALS");
             
-            // 🟢 使用 supabaseClient
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                showToast("LOGIN FAILED: " + error.message);
-            } else {
-                showToast("ACCESS GRANTED");
-                toggleAuthModal();
-                fetchData(); 
+            try {
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) {
+                    console.error(error);
+                    showToast("LOGIN FAILED: " + error.message);
+                } else {
+                    showToast("ACCESS GRANTED");
+                    toggleAuthModal();
+                    fetchData();
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("SYSTEM ERROR");
             }
         }
 
         async function handleRegister() {
+            console.log("Register attempt...");
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             if(!email || !password) return showToast("MISSING CREDENTIALS");
 
-            // 🟢 使用 supabaseClient
-            const { error } = await supabaseClient.auth.signUp({ email, password });
-            if (error) {
-                showToast("ERROR: " + error.message);
-            } else {
-                showToast("REGISTRATION SUCCESSFUL");
+            try {
+                const { error } = await supabaseClient.auth.signUp({ email, password });
+                if (error) {
+                    console.error(error);
+                    showToast("ERROR: " + error.message);
+                } else {
+                    showToast("REGISTRATION SUCCESSFUL");
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("SYSTEM ERROR");
             }
         }
 
         async function handleLogout() {
-            // 🟢 使用 supabaseClient
             await supabaseClient.auth.signOut();
             toggleAuthModal();
             location.reload(); 
@@ -392,15 +436,19 @@
             const originalText = btn.innerText;
             btn.innerText = "...";
 
-            // 🟢 使用 supabaseClient
-            const { data, error } = await supabaseClient.rpc('redeem_kami', { code_input: code });
-            
-            if (error) {
-                showToast("ERROR: " + error.message);
-            } else {
-                showToast(data || "ACTIVATED"); 
-                checkUserStatus(); 
-                fetchData(); 
+            try {
+                const { data, error } = await supabaseClient.rpc('redeem_kami', { code_input: code });
+
+                if (error) {
+                    showToast("ERROR: " + error.message);
+                } else {
+                    showToast(data || "ACTIVATED");
+                    checkUserStatus();
+                    fetchData();
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("SYSTEM ERROR");
             }
             btn.innerText = originalText;
         }
