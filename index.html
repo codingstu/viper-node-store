@@ -44,8 +44,6 @@
         }
         #qrcode img { display: block; margin: 0 auto; border: 4px solid white; border-radius: 4px; }
         .neon-text { text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-        
-        /* 模态框样式 */
         .modal-overlay { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px); }
     </style>
 </head>
@@ -188,11 +186,13 @@
         // ==========================================
         // ⚡️ 配置区域 (请填入你的 Supabase 信息)
         // ==========================================
-        const SUPABASE_URL = 'https://hnlkwtkxbqiakeyienok.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME'; // ⚠️ 注意：填 Anon Key，千万不要填 Service Role Key
+        const SUPABASE_URL = 'https://你的项目ID.supabase.co';
+        const SUPABASE_KEY = '你的_ANON_KEY'; // ⚠️ 注意：填 Anon Key
         // ==========================================
 
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 🟢 修复：重命名为 supabaseClient，避免冲突
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
         const countryMap = {'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国', 'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国', 'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚', 'IN': '印度', 'BR': '巴西', 'UNK': '未知'};
 
         // 初始化
@@ -209,8 +209,8 @@
             empty.classList.add('hidden');
 
             try {
-                // 直接查库，RLS 策略会自动决定返回 20 条还是所有
-                const { data, error } = await supabase
+                // 🟢 使用 supabaseClient
+                const { data, error } = await supabaseClient
                     .from('nodes')
                     .select('content')
                     .order('is_free', { ascending: false }); // 免费的排前面
@@ -296,9 +296,6 @@
 
         function updateStats(data) {
             document.getElementById('node-count').innerText = data.length;
-            if(data.length > 0 && data[0].updated_at) {
-                // 使用数据的更新时间，或者直接用当前时间
-            }
             document.getElementById('all-links').value = data.map(n => n.link).join('\n');
         }
 
@@ -306,9 +303,9 @@
         // 🔐 认证与卡密逻辑
         // ==========================================
 
-        // 检查用户状态并更新 UI
         async function checkUserStatus() {
-            const { data: { user } } = await supabase.auth.getUser();
+            // 🟢 使用 supabaseClient
+            const { data: { user } } = await supabaseClient.auth.getUser();
             const loginSection = document.getElementById('login-section');
             const userSection = document.getElementById('user-section');
             const authBtn = document.getElementById('auth-btn');
@@ -321,8 +318,8 @@
                 userSection.classList.remove('hidden');
                 document.getElementById('current-email').innerText = user.email;
                 
-                // 查询 VIP 信息
-                const { data } = await supabase.from('profiles').select('vip_until').eq('id', user.id).single();
+                // 🟢 使用 supabaseClient
+                const { data } = await supabaseClient.from('profiles').select('vip_until').eq('id', user.id).single();
                 const isVip = data?.vip_until && new Date(data.vip_until) > new Date();
                 
                 if (isVip) {
@@ -355,13 +352,14 @@
             const password = document.getElementById('password').value;
             if(!email || !password) return showToast("MISSING CREDENTIALS");
             
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            // 🟢 使用 supabaseClient
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
                 showToast("LOGIN FAILED: " + error.message);
             } else {
                 showToast("ACCESS GRANTED");
                 toggleAuthModal();
-                fetchData(); // 登录成功后重新拉取（获取更多节点）
+                fetchData(); 
             }
         }
 
@@ -370,19 +368,20 @@
             const password = document.getElementById('password').value;
             if(!email || !password) return showToast("MISSING CREDENTIALS");
 
-            const { error } = await supabase.auth.signUp({ email, password });
+            // 🟢 使用 supabaseClient
+            const { error } = await supabaseClient.auth.signUp({ email, password });
             if (error) {
                 showToast("ERROR: " + error.message);
             } else {
                 showToast("REGISTRATION SUCCESSFUL");
-                // 某些 Supabase 设置可能需要邮箱验证，这里视作直接通过或提示用户
             }
         }
 
         async function handleLogout() {
-            await supabase.auth.signOut();
+            // 🟢 使用 supabaseClient
+            await supabaseClient.auth.signOut();
             toggleAuthModal();
-            location.reload(); // 简单粗暴刷新页面重置状态
+            location.reload(); 
         }
 
         async function redeemKami() {
@@ -393,14 +392,15 @@
             const originalText = btn.innerText;
             btn.innerText = "...";
 
-            const { data, error } = await supabase.rpc('redeem_kami', { code_input: code });
+            // 🟢 使用 supabaseClient
+            const { data, error } = await supabaseClient.rpc('redeem_kami', { code_input: code });
             
             if (error) {
                 showToast("ERROR: " + error.message);
             } else {
-                showToast(data || "ACTIVATED"); // 后端返回 "激活成功"
-                checkUserStatus(); // 刷新 UI 显示新日期
-                fetchData(); // 刷新节点列表
+                showToast(data || "ACTIVATED"); 
+                checkUserStatus(); 
+                fetchData(); 
             }
             btn.innerText = originalText;
         }
@@ -413,11 +413,10 @@
             const modal = document.getElementById('auth-modal');
             modal.classList.toggle('hidden');
             if(!modal.classList.contains('hidden')) {
-                checkUserStatus(); // 打开时检查一次状态
+                checkUserStatus(); 
             }
         }
 
-        // 其他原生功能保持不变 (QR, Flag, Copy)
         const qrModal = document.getElementById('qr-modal');
         const qrContainer = document.getElementById('qrcode');
 
