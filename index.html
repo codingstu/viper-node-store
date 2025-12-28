@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
         tailwind.config = {
@@ -43,6 +44,9 @@
         }
         #qrcode img { display: block; margin: 0 auto; border: 4px solid white; border-radius: 4px; }
         .neon-text { text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        
+        /* 模态框样式 */
+        .modal-overlay { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px); }
     </style>
 </head>
 <body class="text-gray-300 min-h-screen pb-20">
@@ -62,19 +66,25 @@
                     <h1 class="font-black text-xl text-white tracking-widest uppercase italic">
                         SHADOW <span class="text-emerald-500 neon-text">NEXUS</span>
                     </h1>
-                    <div class="flex items-center gap-1.5 text-[9px] text-gray-500 font-mono leading-none mt-0.5 tracking-wider">
+                    <div class="flex items-center gap-2 text-[9px] text-gray-500 font-mono leading-none mt-0.5 tracking-wider">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-[pulse_1s_ease-in-out_infinite]"></span>
                         SYSTEM ONLINE
+                        <span id="vip-badge" class="hidden ml-2 px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded text-[8px] border border-amber-500/30">VIP ACTIVATED</span>
                     </div>
                 </div>
             </div>
-            <div class="flex gap-2">
+            
+            <div class="flex items-center gap-2">
+                <button onclick="toggleAuthModal()" id="auth-btn" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-mono font-bold text-gray-400 hover:text-white transition-colors">
+                    LOGIN
+                </button>
+
                 <button onclick="fetchData()" class="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-400 hover:text-emerald-400 transition-colors group" title="刷新数据">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                 </button>
-                <button onclick="copyAll()" class="px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/30 text-emerald-500 hover:text-emerald-400 rounded-lg text-sm font-bold tracking-wide transition-colors">
+                <button onclick="copyAll()" class="hidden md:block px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/30 text-emerald-500 hover:text-emerald-400 rounded-lg text-sm font-bold tracking-wide transition-colors">
                     COPY ALL
                 </button>
             </div>
@@ -89,7 +99,7 @@
                     NODES: <strong class="text-white font-mono text-sm" id="node-count">--</strong>
                 </span>
                 <span class="w-px h-3 bg-white/10"></span>
-                <span>UPDATED: <strong class="text-emerald-400 font-mono" id="last-update">--</strong></span>
+                <span>STATUS: <strong class="text-emerald-400 font-mono" id="user-status-text">GUEST</strong></span>
             </div>
         </div>
 
@@ -98,7 +108,7 @@
                 <div class="absolute inset-0 rounded-full border-2 border-white/5"></div>
                 <div class="absolute inset-0 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
             </div>
-            <p class="text-gray-500 font-mono text-xs animate-pulse">ESTABLISHING CONNECTION...</p>
+            <p class="text-gray-500 font-mono text-xs animate-pulse">SECURING CONNECTION...</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="grid"></div>
@@ -109,15 +119,60 @@
     <textarea id="all-links" class="hidden"></textarea>
 
     <div id="qr-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center px-4">
-        <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" onclick="closeQR()"></div>
+        <div class="absolute inset-0 modal-overlay" onclick="closeQR()"></div>
         <div class="relative bg-[#121212] border border-white/10 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 w-[320px] max-w-full animate-fade-in z-10">
             <h3 class="text-white font-bold tracking-wider" id="qr-title">SCAN CODE</h3>
-            
             <div id="qrcode" class="bg-white p-2 rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.1)] min-h-[180px] flex items-center justify-center"></div>
-            
             <p class="text-xs text-gray-600 text-center w-full truncate px-2 font-mono" id="qr-link-preview"></p>
-            <button onclick="closeQR()" class="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 font-medium transition-colors border border-white/5">
-                CLOSE
+            <button onclick="closeQR()" class="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 font-medium transition-colors border border-white/5">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="toggleAuthModal()"></div>
+        <div class="relative glass-card p-6 rounded-2xl w-full max-w-sm border border-white/10 animate-fade-in z-20 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-1 tracking-wide">ACCESS CONTROL</h3>
+            <p class="text-xs text-gray-500 font-mono mb-6" id="auth-subtitle">IDENTIFY YOURSELF</p>
+            
+            <div id="login-section" class="space-y-3">
+                <input id="email" type="email" placeholder="Email Address" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors">
+                <input id="password" type="password" placeholder="Password" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors">
+                
+                <div class="flex gap-3 pt-2">
+                    <button onclick="handleLogin()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                        LOGIN
+                    </button>
+                    <button onclick="handleRegister()" class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        REGISTER
+                    </button>
+                </div>
+            </div>
+
+            <div id="user-section" class="hidden space-y-4">
+                <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                    <div class="text-xs text-gray-400 font-mono">ACCOUNT</div>
+                    <div class="text-sm text-white font-bold truncate" id="current-email">user@example.com</div>
+                    <div class="mt-2 text-xs text-gray-400 font-mono">VIP EXPIRATION</div>
+                    <div class="text-emerald-400 font-mono font-bold" id="vip-date">--</div>
+                </div>
+
+                <div class="pt-2">
+                    <label class="text-xs text-gray-500 font-mono block mb-1.5">REDEEM CODE (卡密)</label>
+                    <div class="flex gap-2">
+                        <input id="kami-code" type="text" placeholder="XXXX-XXXX-XXXX" class="flex-1 bg-[#0a0a0a] border border-amber-500/30 rounded-lg px-3 py-2 text-sm text-amber-500 focus:border-amber-500 outline-none font-mono">
+                        <button onclick="redeemKami()" class="px-4 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/50 text-amber-500 rounded-lg text-xs font-bold transition-colors">
+                            ACTIVATE
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="handleLogout()" class="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 rounded-lg transition-colors">
+                    LOGOUT
+                </button>
+            </div>
+            
+            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
     </div>
@@ -130,18 +185,21 @@
     </div>
 
     <script>
-        const countryMap = {
-            'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国',
-            'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国',
-            'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚',
-            'IN': '印度', 'BR': '巴西', 'UNK': '未知地区'
-        };
+        // ==========================================
+        // ⚡️ 配置区域 (请填入你的 Supabase 信息)
+        // ==========================================
+        const SUPABASE_URL = 'https://你的项目ID.supabase.co';
+        const SUPABASE_KEY = '你的_ANON_KEY'; // ⚠️ 注意：填 Anon Key，千万不要填 Service Role Key
+        // ==========================================
 
-        const DATA_URL = './public/nodes.json';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const countryMap = {'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国', 'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国', 'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚', 'IN': '印度', 'BR': '巴西', 'UNK': '未知'};
 
+        // 初始化
         fetchData();
 
-        function fetchData() {
+        // 核心：获取数据 (Supabase 版)
+        async function fetchData() {
             const loading = document.getElementById('loading');
             const grid = document.getElementById('grid');
             const empty = document.getElementById('empty-state');
@@ -150,34 +208,36 @@
             grid.innerHTML = ''; 
             empty.classList.add('hidden');
 
-            fetch(DATA_URL + '?t=' + new Date().getTime())
-                .then(res => res.json())
-                .then(data => {
-                    loading.classList.add('hidden');
-                    if (!data || data.length === 0) {
-                        empty.classList.remove('hidden');
-                        return;
-                    }
-                    updateStats(data);
-                    renderNodes(data);
-                })
-                .catch(err => {
-                    console.error(err);
-                    loading.innerHTML = `<span class="text-red-500 text-sm font-mono">CONNECTION FAILED</span>`;
-                });
-        }
+            try {
+                // 直接查库，RLS 策略会自动决定返回 20 条还是所有
+                const { data, error } = await supabase
+                    .from('nodes')
+                    .select('content')
+                    .order('is_free', { ascending: false }); // 免费的排前面
 
-        function updateStats(data) {
-            document.getElementById('node-count').innerText = data.length;
-            if(data.length > 0 && data[0].updated_at) {
-                const date = new Date(data[0].updated_at);
-                document.getElementById('last-update').innerText = date.toLocaleString('zh-CN', { 
-                    month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-                });
+                loading.classList.add('hidden');
+                
+                if (error) throw error;
+                
+                // 提取 JSON 内容
+                const nodes = data ? data.map(item => item.content) : [];
+                
+                if (nodes.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                
+                updateStats(nodes);
+                renderNodes(nodes);
+                checkUserStatus(); // 同步检查用户状态
+
+            } catch (err) {
+                console.error(err);
+                loading.innerHTML = `<span class="text-red-500 text-sm font-mono">CONNECTION FAILED: ${err.message}</span>`;
             }
-            document.getElementById('all-links').value = data.map(n => n.link).join('\n');
         }
 
+        // 渲染节点卡片 (保持原样)
         function renderNodes(data) {
             const grid = document.getElementById('grid');
             data.forEach((node, index) => {
@@ -234,39 +294,153 @@
             });
         }
 
+        function updateStats(data) {
+            document.getElementById('node-count').innerText = data.length;
+            if(data.length > 0 && data[0].updated_at) {
+                // 使用数据的更新时间，或者直接用当前时间
+            }
+            document.getElementById('all-links').value = data.map(n => n.link).join('\n');
+        }
+
+        // ==========================================
+        // 🔐 认证与卡密逻辑
+        // ==========================================
+
+        // 检查用户状态并更新 UI
+        async function checkUserStatus() {
+            const { data: { user } } = await supabase.auth.getUser();
+            const loginSection = document.getElementById('login-section');
+            const userSection = document.getElementById('user-section');
+            const authBtn = document.getElementById('auth-btn');
+            const statusText = document.getElementById('user-status-text');
+            const vipBadge = document.getElementById('vip-badge');
+            const subtitle = document.getElementById('auth-subtitle');
+
+            if (user) {
+                loginSection.classList.add('hidden');
+                userSection.classList.remove('hidden');
+                document.getElementById('current-email').innerText = user.email;
+                
+                // 查询 VIP 信息
+                const { data } = await supabase.from('profiles').select('vip_until').eq('id', user.id).single();
+                const isVip = data?.vip_until && new Date(data.vip_until) > new Date();
+                
+                if (isVip) {
+                    statusText.innerText = "VIP MEMBER";
+                    statusText.className = "text-amber-400 font-mono";
+                    vipBadge.classList.remove('hidden');
+                    document.getElementById('vip-date').innerText = new Date(data.vip_until).toLocaleDateString();
+                    authBtn.innerText = "VIP";
+                    authBtn.className = "px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 rounded-lg text-xs font-mono font-bold text-amber-500 transition-colors";
+                } else {
+                    statusText.innerText = "FREE USER";
+                    statusText.className = "text-gray-400 font-mono";
+                    vipBadge.classList.add('hidden');
+                    document.getElementById('vip-date').innerText = "NOT ACTIVE";
+                    authBtn.innerText = "ACCOUNT";
+                }
+                subtitle.innerText = "WELCOME BACK, OPERATOR";
+            } else {
+                loginSection.classList.remove('hidden');
+                userSection.classList.add('hidden');
+                statusText.innerText = "GUEST (PREVIEW)";
+                vipBadge.classList.add('hidden');
+                authBtn.innerText = "LOGIN";
+                subtitle.innerText = "IDENTIFY YOURSELF";
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if(!email || !password) return showToast("MISSING CREDENTIALS");
+            
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                showToast("LOGIN FAILED: " + error.message);
+            } else {
+                showToast("ACCESS GRANTED");
+                toggleAuthModal();
+                fetchData(); // 登录成功后重新拉取（获取更多节点）
+            }
+        }
+
+        async function handleRegister() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if(!email || !password) return showToast("MISSING CREDENTIALS");
+
+            const { error } = await supabase.auth.signUp({ email, password });
+            if (error) {
+                showToast("ERROR: " + error.message);
+            } else {
+                showToast("REGISTRATION SUCCESSFUL");
+                // 某些 Supabase 设置可能需要邮箱验证，这里视作直接通过或提示用户
+            }
+        }
+
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            toggleAuthModal();
+            location.reload(); // 简单粗暴刷新页面重置状态
+        }
+
+        async function redeemKami() {
+            const code = document.getElementById('kami-code').value;
+            if(!code) return showToast("ENTER CODE");
+
+            const btn = document.querySelector('#user-section button');
+            const originalText = btn.innerText;
+            btn.innerText = "...";
+
+            const { data, error } = await supabase.rpc('redeem_kami', { code_input: code });
+            
+            if (error) {
+                showToast("ERROR: " + error.message);
+            } else {
+                showToast(data || "ACTIVATED"); // 后端返回 "激活成功"
+                checkUserStatus(); // 刷新 UI 显示新日期
+                fetchData(); // 刷新节点列表
+            }
+            btn.innerText = originalText;
+        }
+
+        // ==========================================
+        // 🛠 辅助功能
+        // ==========================================
+
+        function toggleAuthModal() {
+            const modal = document.getElementById('auth-modal');
+            modal.classList.toggle('hidden');
+            if(!modal.classList.contains('hidden')) {
+                checkUserStatus(); // 打开时检查一次状态
+            }
+        }
+
+        // 其他原生功能保持不变 (QR, Flag, Copy)
         const qrModal = document.getElementById('qr-modal');
         const qrContainer = document.getElementById('qrcode');
 
         function showQR(link, title) {
             document.getElementById('qr-title').innerText = title;
             document.getElementById('qr-link-preview').innerText = link;
-            qrContainer.innerHTML = ''; // 清空
-            qrModal.classList.remove('hidden'); // 先显示模态框，确保 JS 能获取尺寸
-
+            qrContainer.innerHTML = '';
+            qrModal.classList.remove('hidden');
             try {
-                // 🔥 修复核心：降低容错率 (L) 并加上错误捕获
                 new QRCode(qrContainer, {
                     text: link,
                     width: 200,
                     height: 200,
                     colorDark : "#000000",
                     colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.L  // 修改这里：H -> L (Low)，这能容纳更多字符！
+                    correctLevel : QRCode.CorrectLevel.L
                 });
             } catch (e) {
-                console.error("二维码生成失败", e);
-                qrContainer.innerHTML = `
-                    <div class="text-center py-8">
-                        <p class="text-red-500 font-bold text-sm mb-2">二维码生成失败</p>
-                        <p class="text-gray-500 text-xs">节点链接太长<br>请直接点击复制</p>
-                    </div>
-                `;
+                console.error(e);
             }
         }
 
-        function closeQR() {
-            qrModal.classList.add('hidden');
-        }
+        function closeQR() { qrModal.classList.add('hidden'); }
 
         function getFlagEmoji(countryCode) {
             if (!countryCode || countryCode === 'UNK') return '🌐';
