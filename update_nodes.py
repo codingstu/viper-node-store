@@ -15,7 +15,10 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def update():
     print("🚀 正在拉取新节点...")
     try:
-        resp = requests.get(API_URL, timeout=30)
+        # 🔥 修改处：将 timeout 从 30 改为 120 (秒)
+        # 给后端更多时间去处理数据或进行测速
+        resp = requests.get(API_URL, timeout=120)
+        
         if resp.status_code != 200:
             print(f"❌ API 请求失败: {resp.status_code}")
             return
@@ -29,7 +32,7 @@ def update():
         for index, node in enumerate(new_nodes):
             node_id = f"{node['host']}:{node['port']}"
             
-            # 设定前 10 个为免费，其余为付费 (逻辑标记)
+            # 设定前 10 个为免费，其余为付费
             is_free = True if index < 10 else False
             
             # 处理速度字段
@@ -56,10 +59,7 @@ def update():
             print(f"✅ 数据库更新成功: {len(data_to_upsert)} 条数据")
 
         # 🟢 3. 生成 '阉割版' public/nodes.json (只含前 5 个)
-        # 目的：为了让 GitHub Actions 有东西提交，不报错，同时不泄露核心数据
         os.makedirs("public", exist_ok=True)
-        
-        # 只取前 5 个作为诱饵/试用
         safe_nodes = new_nodes[:5] 
         
         with open("public/nodes.json", "w", encoding="utf-8") as f:
