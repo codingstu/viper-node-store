@@ -382,42 +382,76 @@
 
         async function handleLogin() {
             console.log("Login attempt...");
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             if(!email || !password) return showToast("MISSING CREDENTIALS");
             
             try {
-                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
                 if (error) {
-                    console.error(error);
-                    showToast("LOGIN FAILED: " + error.message);
+                    console.error("Login Error:", error);
+                    if (error.message.includes("Invalid login credentials")) {
+                        showToast("WRONG EMAIL OR PASSWORD");
+                    } else if (error.message.includes("Email not confirmed")) {
+                        showToast("PLEASE CONFIRM EMAIL");
+                    } else {
+                        showToast("LOGIN FAILED: " + error.message);
+                    }
                 } else {
                     showToast("ACCESS GRANTED");
                     toggleAuthModal();
                     fetchData();
                 }
             } catch (e) {
-                console.error(e);
+                console.error("System Error:", e);
                 showToast("SYSTEM ERROR");
             }
         }
 
         async function handleRegister() {
             console.log("Register attempt...");
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
+
             if(!email || !password) return showToast("MISSING CREDENTIALS");
+            if(password.length < 6) return showToast("PASSWORD MIN 6 CHARS");
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if(!emailRegex.test(email)) return showToast("INVALID EMAIL FORMAT");
 
             try {
-                const { error } = await supabaseClient.auth.signUp({ email, password });
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        emailRedirectTo: window.location.origin
+                    }
+                });
+
                 if (error) {
-                    console.error(error);
-                    showToast("ERROR: " + error.message);
+                    console.error("Register Error:", error);
+                    if (error.message.includes("User already registered")) {
+                        showToast("ACCOUNT EXISTS - PLEASE LOGIN");
+                    } else if (error.status === 422 || error.message.includes("password")) {
+                        showToast("WEAK PASSWORD");
+                    } else if (error.status === 400) {
+                         showToast("INVALID DATA: " + error.message);
+                    } else {
+                        showToast("ERROR: " + error.message);
+                    }
                 } else {
-                    showToast("REGISTRATION SUCCESSFUL");
+                    console.log("Register Success:", data);
+                    if (data?.session) {
+                        showToast("REGISTRATION SUCCESSFUL");
+                        toggleAuthModal();
+                        fetchData();
+                    } else if (data?.user) {
+                        showToast("CHECK EMAIL TO CONFIRM");
+                    }
                 }
             } catch (e) {
-                console.error(e);
+                console.error("System Error:", e);
                 showToast("SYSTEM ERROR");
             }
         }
