@@ -1,58 +1,61 @@
-# update_nodes.py
 import requests
-import json
 import os
 from datetime import datetime
+from supabase import create_client, Client
 
-# 配置
-SHADOW_VIPER_API = os.environ["SHADOW_VIPER_API"] # 从环境变量读取
-DATA_FILE = "public/nodes.json" # 数据存放在 public 目录，方便前端读取
-MAX_NODES = 800
+# 从环境变量获取配置
+API_URL = os.environ["SHADOW_VIPER_API"]
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+
+# 连接数据库
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def update():
-    # 1. 读取旧数据
-    old_nodes = []
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r') as f:
-                old_nodes = json.load(f)
-        except:
-            pass
-            
-    # 转为字典方便去重 { "host:port": node_dict }
-    node_map = {f"{n['host']}:{n['port']}": n for n in old_nodes}
-    
-    # 2. 从 Azure 拉取新数据
-    print("正在从 Shadow Viper 拉取...")
+    print("正在拉取新节点...")
     try:
-        resp = requests.get(SHADOW_VIPER_API, timeout=10)
-        if resp.status_code == 200:
-            new_nodes = resp.json()
-            print(f"拉取到 {len(new_nodes)} 个新节点")
+        # 1. 拉取数据
+        resp = requests.get(API_URL, timeout=15)
+        if resp.status_code != 200:
+            print("API 请求失败")
+            return
+        
+        new_nodes = resp.json()
+        
+        # 2. 简单清洗和排序
+        # 假设 API 返回里有 speed 字段，或者你自己测速后排序
+        # 这里演示：直接按列表顺序，前20个免费
+        
+        data_to_upsert = []
+        for index, node in enumerate(new_nodes):
+            # 唯一标识符
+            node_id = f"{node['host']}:{node['port']}"
             
-            for node in new_nodes:
-                key = f"{node['host']}:{node['port']}"
-                node['updated_at'] = datetime.now().isoformat()
-                # 更新或插入
-                node_map[key] = node
-        else:
-            print("拉取失败")
-    except Exception as e:
-        print(f"请求错误: {e}")
+            # 核心逻辑：前20个设为免费
+            is_free = True if index < 20 else False
+            
+            data_to_upsert.append({
+                "id": node_id,
+                "content": node,        # 完整存进去
+                "is_free": is_free,     # 权限标记
+                "speed": node.get('speed', 0),
+                "updated_at": datetime.now().isoformat()
+            })
 
-    # 3. 排序与截断 (保留最新的 800 个)
-    # 按 updated_at 倒序
-    all_nodes = list(node_map.values())
-    all_nodes.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
-    
-    final_nodes = all_nodes[:MAX_NODES]
-    
-    # 4. 保存文件
-    os.makedirs("public", exist_ok=True)
-    with open(DATA_FILE, 'w') as f:
-        json.dump(final_nodes, f, indent=2, ensure_ascii=False)
-    
-    print(f"更新完成，当前库存: {len(final_nodes)}")
+        # 3. 批量写入 Supabase
+        # Supabase 建议分批写入，避免包太大
+        batch_size = 100
+        for i in range(0, len(data_to_upsert), batch_size):
+            batch = data_to_upsert[i:i+batch_size]
+            supabase.table("nodes").upsert(batch).execute()
+            
+        print(f"成功更新数据库: {len(data_to_upsert)} 个节点")
+
+        # 4. (可选) 清理旧节点
+        # supabase.table("nodes").delete().lt("updated_at", "2023-01-01...").execute()
+
+    except Exception as e:
+        print(f"脚本执行出错: {e}")
 
 if __name__ == "__main__":
     update()
