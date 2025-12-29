@@ -11,7 +11,6 @@ on:
       - 'update_nodes.py'
       - '.github/workflows/update-nodes.yml'
 
-# 添加写入权限
 permissions:
   contents: write
 
@@ -23,8 +22,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,23 +32,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install aiohttp supabase requests aiodns
-          pip list
       
       - name: Run node testing script
         env:
           SHADOW_VIPER_API: ${{ secrets.SHADOW_VIPER_API }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          echo "🚀 Starting node testing..."
-          python update_nodes.py
-          echo "✅ Node testing completed!"
+        run: python update_nodes.py
       
-      - name: Commit updated nodes.json (if changed)
+      - name: Commit updated nodes.json
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          if git diff --quiet public/nodes.json; then
-            echo "No changes to nodes.json"
-          
+          git add public/nodes.json
+          git diff --staged --quiet || git commit -m "chore: auto-update nodes.json"
+          git push || echo "Nothing to push"
