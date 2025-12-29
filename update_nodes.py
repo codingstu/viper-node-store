@@ -237,8 +237,8 @@ def save_to_supabase(nodes: List[Dict]):
                 "id": node_id,
                 "content": node,  # content 里的 speed 已经被 test_node_async 修改了
                 "is_free": i < 15,
-                "speed": node["speed"],  # 显式更新外层字段
-                "latency": node["latency_ms"],
+                "speed": int(float(node.get("speed", 0))), # 🟢 修复点：强制转换为整数
+                "latency": int(node.get("latency_ms", 9999)),
                 "updated_at": datetime.now().isoformat()
             }
             data_to_upsert.append(clean_data)
