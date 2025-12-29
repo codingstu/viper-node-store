@@ -140,14 +140,6 @@
                             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                 </button>
-                <button onclick="testAllNodes()"
-                    class="hidden md:flex px-3 py-2 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-500/30 text-cyan-500 hover:text-cyan-400 rounded-lg text-sm font-bold tracking-wide transition-colors items-center gap-1.5"
-                    title="测试所有节点延迟">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    TEST
-                </button>
                 <button onclick="copyAll()"
                     class="hidden md:block px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/30 text-emerald-500 hover:text-emerald-400 rounded-lg text-sm font-bold tracking-wide transition-colors">
                     COPY ALL
@@ -720,11 +712,8 @@
                 <div class="h-1.5 w-full bg-black/40 rounded-full overflow-hidden mb-auto">
                     <div class="h-full ${barColor} ${glowClass} transition-all duration-700" style="width: ${Math.min(qualityScore, 100)}%"></div>
                 </div>
-                <div class="grid grid-cols-5 gap-2 mt-3">
-                    <button onclick="copyLink('${node.link}')" class="col-span-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] tracking-wide">COPY</button>
-                    <button onclick="testNodePing('${node.host}', ${node.port}, '${nodeId}')" id="${nodeId}-test-btn" class="col-span-1 py-1.5 rounded-lg text-xs flex items-center justify-center bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 border border-cyan-500/20 transition-all active:scale-[0.98]" title="测试延迟">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                    </button>
+                <div class="grid grid-cols-4 gap-2 mt-3">
+                    <button onclick="copyLink('${node.link}')" class="col-span-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] tracking-wide">COPY LINK</button>
                     <button onclick="showQR('${node.link}', '${cnName} ${node.protocol}')" class="col-span-1 py-1.5 rounded-lg text-xs flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/5 transition-all active:scale-[0.98]">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                     </button>
@@ -732,100 +721,6 @@
             `;
             return card;
         }
-        
-        // ================= 客户端节点测试 =================
-        async function testNodePing(host, port, nodeId) {
-            const btn = document.getElementById(`${nodeId}-test-btn`);
-            const latencyEl = document.getElementById(`${nodeId}-latency`);
-            
-            if (!btn || !latencyEl) return;
-            
-            // 显示测试中状态
-            btn.disabled = true;
-            btn.innerHTML = '<svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
-            latencyEl.innerText = '测试中...';
-            latencyEl.className = 'font-mono text-[10px] text-gray-400';
-            
-            let tested = false;
-            
-            try {
-                // 方案1: 尝试使用后端 API 进行 TCP ping
-                const response = await fetch(`${VIPER_API_BASE}/api/node/ping?host=${encodeURIComponent(host)}&port=${port}`, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(6000)
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.latency_ms) {
-                        const latency = data.latency_ms;
-                        latencyEl.innerText = `${latency}ms`;
-                        latencyEl.className = `font-mono text-[10px] ${latency < 300 ? 'text-emerald-400' : latency < 800 ? 'text-amber-400' : 'text-rose-400'}`;
-                        showToast(`延迟: ${latency}ms`);
-                        tested = true;
-                    } else if (data.success === false) {
-                        latencyEl.innerText = '超时';
-                        latencyEl.className = 'font-mono text-[10px] text-rose-400';
-                        showToast('节点无响应');
-                        tested = true;
-                    }
-                }
-            } catch (e) {
-                // 后端 API 不可用，尝试回退方案
-            }
-            
-            // 方案2: HTTP 回退测试 (估算)
-            if (!tested) {
-                try {
-                    const startTime = performance.now();
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
-                    
-                    await fetch(`https://${host}:${port}/`, {
-                        method: 'HEAD',
-                        mode: 'no-cors',
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    const latency = Math.round(performance.now() - startTime);
-                    
-                    // no-cors 模式下可能返回 opaque response，但我们只测量时间
-                    latencyEl.innerText = `~${latency}ms`;
-                    latencyEl.className = 'font-mono text-[10px] text-cyan-400';
-                    showToast(`网络延迟: ~${latency}ms (估算)`);
-                    tested = true;
-                } catch (e) {
-                    // HTTP 测试也失败
-                }
-            }
-            
-            // 方案3: 如果都失败，显示提示
-            if (!tested) {
-                latencyEl.innerText = 'N/A';
-                latencyEl.className = 'font-mono text-[10px] text-gray-500';
-                showToast('浏览器无法直接测试，请在客户端验证');
-            }
-            
-            // 恢复按钮
-            btn.disabled = false;
-            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>';
-        }
-        
-        // 批量测试所有节点
-        async function testAllNodes() {
-            showToast('正在测试所有节点...');
-            const cards = document.querySelectorAll('[id^="node-"]');
-            
-            for (const card of cards) {
-                const testBtn = card.querySelector('[id$="-test-btn"]');
-                if (testBtn) {
-                    testBtn.click();
-                    await new Promise(r => setTimeout(r, 500)); // 间隔避免过快
-                }
-            }
-            
-            showToast('测试完成');
         }
         
         // ================= 筛选与排序功能 =================
