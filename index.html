@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SHADOW NEXUS | 节点核心</title>
-    
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'%3E%3Cpath d='M13 10V3L4 14h7v7l9-11h-7z'/%3E%3C/svg%3E" type="image/svg+xml">
 
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'%3E%3Cpath d='M13 10V3L4 14h7v7l9-11h-7z'/%3E%3C/svg%3E"
+        type="image/svg+xml">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.6.1/dist/easy.qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+
     <script>
         tailwind.config = {
             theme: {
@@ -29,32 +34,75 @@
     <style>
         body {
             background-color: #050505;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.06), transparent 25%), 
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.06), transparent 25%),
                 radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.06), transparent 25%);
             background-attachment: fixed;
         }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #050505; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
         .glass-card {
             background: rgba(20, 20, 22, 0.6);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        #qrcode img { display: block; margin: 0 auto; border: 4px solid white; border-radius: 4px; }
-        .neon-text { text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-        .modal-overlay { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px); }
+
+        /* 增加了 max-width: 100%; height: auto; */
+        /* 🟢 修复：强制限制二维码最大宽度，防止撑破弹窗 */
+        #qrcode {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            /* 防止溢出 */
+        }
+
+        #qrcode img,
+        #qrcode canvas {
+            display: block;
+            max-width: 100% !important;
+            /* 强制不超过父容器 */
+            height: auto !important;
+            /* 保持比例 */
+            border: 4px solid white;
+            border-radius: 4px;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+        }
     </style>
 </head>
+
 <body class="text-gray-300 min-h-screen pb-20">
 
     <div class="fixed top-0 left-0 w-full z-50 border-b border-white/5 bg-[#050505]/80 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="relative group">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
-                    <div class="relative w-9 h-9 rounded-lg bg-[#0a0a0a] border border-white/10 flex items-center justify-center text-emerald-500 shadow-xl">
+                    <div
+                        class="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 animate-pulse">
+                    </div>
+                    <div
+                        class="relative w-9 h-9 rounded-lg bg-[#0a0a0a] border border-white/10 flex items-center justify-center text-emerald-500 shadow-xl">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
@@ -64,30 +112,41 @@
                     <h1 class="font-black text-xl text-white tracking-widest uppercase italic">
                         SHADOW <span class="text-emerald-500 neon-text">NEXUS</span>
                     </h1>
-                    <div class="flex items-center gap-2 text-[9px] text-gray-500 font-mono leading-none mt-0.5 tracking-wider">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-[pulse_1s_ease-in-out_infinite]"></span>
+                    <div
+                        class="flex items-center gap-2 text-[9px] text-gray-500 font-mono leading-none mt-0.5 tracking-wider">
+                        <span
+                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-[pulse_1s_ease-in-out_infinite]"></span>
                         SYSTEM ONLINE
-                        <span id="vip-badge" class="hidden ml-2 px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded text-[8px] border border-amber-500/30">VIP ACTIVATED</span>
+                        <span id="vip-badge"
+                            class="hidden ml-2 px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded text-[8px] border border-amber-500/30">VIP
+                            ACTIVATED</span>
                     </div>
                 </div>
             </div>
-            
+
             <div class="flex items-center gap-2">
                 <!-- 回国节点按钮 -->
-                <button onclick="openCnModal()" id="cn-btn" class="hidden px-3 py-1.5 bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 rounded-lg text-xs font-mono font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                <button onclick="openCnModal()" id="cn-btn"
+                    class="hidden px-3 py-1.5 bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 rounded-lg text-xs font-mono font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
                     <span class="text-sm">🇨🇳</span> CN LINE
                 </button>
 
-                <button onclick="toggleAuthModal()" id="auth-btn" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-mono font-bold text-gray-400 hover:text-white transition-colors">
+                <button onclick="toggleAuthModal()" id="auth-btn"
+                    class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-mono font-bold text-gray-400 hover:text-white transition-colors">
                     LOGIN
                 </button>
 
-                <button onclick="fetchData()" class="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-400 hover:text-emerald-400 transition-colors group" title="刷新数据">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <button onclick="fetchData()"
+                    class="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-400 hover:text-emerald-400 transition-colors group"
+                    title="刷新数据">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:animate-spin" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                 </button>
-                <button onclick="copyAll()" class="hidden md:block px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/30 text-emerald-500 hover:text-emerald-400 rounded-lg text-sm font-bold tracking-wide transition-colors">
+                <button onclick="copyAll()"
+                    class="hidden md:block px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/30 text-emerald-500 hover:text-emerald-400 rounded-lg text-sm font-bold tracking-wide transition-colors">
                     COPY ALL
                 </button>
             </div>
@@ -109,7 +168,9 @@
         <div id="loading" class="flex flex-col items-center justify-center py-32 space-y-4">
             <div class="relative w-12 h-12">
                 <div class="absolute inset-0 rounded-full border-2 border-white/5"></div>
-                <div class="absolute inset-0 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+                <div
+                    class="absolute inset-0 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin">
+                </div>
             </div>
             <p class="text-gray-500 font-mono text-xs animate-pulse">SECURING CONNECTION...</p>
         </div>
@@ -122,32 +183,41 @@
     <textarea id="all-links" class="hidden"></textarea>
 
     <!-- 二维码弹窗 -->
-    <div id="qr-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center px-4">
+    <div id="qr-modal" class="fixed inset-0 z-[120] hidden flex items-center justify-center px-4">
         <div class="absolute inset-0 modal-overlay" onclick="closeQR()"></div>
-        <div class="relative bg-[#121212] border border-white/10 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 w-[320px] max-w-full animate-fade-in z-10">
+        <div
+            class="relative bg-[#121212] border border-white/10 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 w-[320px] max-w-full animate-fade-in z-10">
             <h3 class="text-white font-bold tracking-wider" id="qr-title">SCAN CODE</h3>
-            <div id="qrcode" class="bg-white p-2 rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.1)] min-h-[180px] flex items-center justify-center"></div>
+            <div id="qrcode"
+                class="bg-white p-2 rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.1)] min-h-[180px] flex items-center justify-center">
+            </div>
             <p class="text-xs text-gray-600 text-center w-full truncate px-2 font-mono" id="qr-link-preview"></p>
-            <button onclick="closeQR()" class="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 font-medium transition-colors border border-white/5">CLOSE</button>
+            <button onclick="closeQR()"
+                class="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 font-medium transition-colors border border-white/5">CLOSE</button>
         </div>
     </div>
 
     <!-- 登录/注册弹窗 -->
     <div id="auth-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center px-4">
         <div class="absolute inset-0 modal-overlay" onclick="toggleAuthModal()"></div>
-        <div class="relative glass-card p-6 rounded-2xl w-full max-w-sm border border-white/10 animate-fade-in z-20 shadow-2xl">
+        <div
+            class="relative glass-card p-6 rounded-2xl w-full max-w-sm border border-white/10 animate-fade-in z-20 shadow-2xl">
             <h3 class="text-lg font-bold text-white mb-1 tracking-wide">ACCESS CONTROL</h3>
             <p class="text-xs text-gray-500 font-mono mb-6" id="auth-subtitle">IDENTIFY YOURSELF</p>
-            
+
             <div id="login-section" class="space-y-3">
-                <input id="email" type="email" placeholder="Email Address" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors">
-                <input id="password" type="password" placeholder="Password" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors">
-                
+                <input id="email" type="email" placeholder="Email Address"
+                    class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors">
+                <input id="password" type="password" placeholder="Password"
+                    class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors">
+
                 <div class="flex gap-3 pt-2">
-                    <button onclick="handleLogin()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                    <button onclick="handleLogin()"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                         LOGIN
                     </button>
-                    <button onclick="handleRegister()" class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                    <button onclick="handleRegister()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
                         REGISTER
                     </button>
                 </div>
@@ -164,20 +234,26 @@
                 <div class="pt-2">
                     <label class="text-xs text-gray-500 font-mono block mb-1.5">REDEEM CODE (卡密)</label>
                     <div class="flex gap-2">
-                        <input id="kami-code" type="text" placeholder="XXXX-XXXX-XXXX" class="flex-1 bg-[#0a0a0a] border border-amber-500/30 rounded-lg px-3 py-2 text-sm text-amber-500 focus:border-amber-500 outline-none font-mono">
-                        <button onclick="redeemKami()" class="px-4 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/50 text-amber-500 rounded-lg text-xs font-bold transition-colors">
+                        <input id="kami-code" type="text" placeholder="XXXX-XXXX-XXXX"
+                            class="flex-1 bg-[#0a0a0a] border border-amber-500/30 rounded-lg px-3 py-2 text-sm text-amber-500 focus:border-amber-500 outline-none font-mono">
+                        <button onclick="redeemKami()"
+                            class="px-4 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/50 text-amber-500 rounded-lg text-xs font-bold transition-colors">
                             ACTIVATE
                         </button>
                     </div>
                 </div>
 
-                <button onclick="handleLogout()" class="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 rounded-lg transition-colors">
+                <button onclick="handleLogout()"
+                    class="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 rounded-lg transition-colors">
                     LOGOUT
                 </button>
             </div>
-            
+
             <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
             </button>
         </div>
     </div>
@@ -185,13 +261,17 @@
     <!-- 回国节点弹窗 -->
     <div id="cn-modal" class="fixed inset-0 z-[105] hidden flex items-center justify-center px-4">
         <div class="absolute inset-0 modal-overlay" onclick="closeCnModal()"></div>
-        <div class="relative glass-card p-6 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-red-500/20 animate-fade-in z-20 shadow-2xl">
+        <div
+            class="relative glass-card p-6 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-red-500/20 animate-fade-in z-20 shadow-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
                     <span class="text-2xl">🇨🇳</span> CN DIRECT LINES
                 </h3>
                 <button onclick="closeCnModal()" class="text-gray-500 hover:text-white">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
                 </button>
             </div>
 
@@ -207,9 +287,13 @@
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
-        <div class="glass-card px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-emerald-500/30 bg-[#050505]/95 backdrop-blur-xl">
-            <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-black text-xs font-bold shadow-[0_0_10px_rgba(16,185,129,0.5)]">✓</div>
+    <div id="toast"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div
+            class="glass-card px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-emerald-500/30 bg-[#050505]/95 backdrop-blur-xl">
+            <div
+                class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-black text-xs font-bold shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                ✓</div>
             <span class="text-sm font-bold text-white tracking-wide" id="toast-msg">COPIED</span>
         </div>
     </div>
@@ -230,8 +314,8 @@
             console.error('Supabase library not loaded!');
             alert('System Error: Core library failed to load. Please check your connection.');
         }
-        
-        const countryMap = {'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国', 'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国', 'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚', 'IN': '印度', 'BR': '巴西', 'UNK': '未知'};
+
+        const countryMap = { 'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国', 'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国', 'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚', 'IN': '印度', 'BR': '巴西', 'UNK': '未知' };
 
         // 全局变量存储节点
         let globalCnNodes = [];
@@ -302,7 +386,7 @@
             const cnBtn = document.getElementById('cn-btn');
 
             loading.classList.remove('hidden');
-            grid.innerHTML = ''; 
+            grid.innerHTML = '';
             empty.classList.add('hidden');
             cnBtn.classList.add('hidden'); // 先隐藏回国按钮
 
@@ -320,12 +404,12 @@
                     .order('is_free', { ascending: false }); // 免费的排前面
 
                 loading.classList.add('hidden');
-                
+
                 if (error) throw error;
-                
+
                 // 提取 JSON 内容
                 let nodes = data ? data.map(item => item.content) : [];
-                
+
                 if (nodes.length === 0) {
                     empty.classList.remove('hidden');
                     return;
@@ -452,8 +536,8 @@
             console.log("Login attempt...");
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            if(!email || !password) return showToast("MISSING CREDENTIALS");
-            
+            if (!email || !password) return showToast("MISSING CREDENTIALS");
+
             try {
                 const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
@@ -482,11 +566,11 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
-            if(!email || !password) return showToast("MISSING CREDENTIALS");
-            if(password.length < 6) return showToast("PASSWORD MIN 6 CHARS");
+            if (!email || !password) return showToast("MISSING CREDENTIALS");
+            if (password.length < 6) return showToast("PASSWORD MIN 6 CHARS");
 
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if(!emailRegex.test(email)) return showToast("INVALID EMAIL FORMAT");
+            if (!emailRegex.test(email)) return showToast("INVALID EMAIL FORMAT");
 
             try {
                 const { data, error } = await supabaseClient.auth.signUp({
@@ -504,7 +588,7 @@
                     } else if (error.status === 422 || error.message.includes("password")) {
                         showToast("WEAK PASSWORD");
                     } else if (error.status === 400) {
-                         showToast("INVALID DATA: " + error.message);
+                        showToast("INVALID DATA: " + error.message);
                     } else {
                         showToast("ERROR: " + error.message);
                     }
@@ -527,12 +611,12 @@
         async function handleLogout() {
             await supabaseClient.auth.signOut();
             toggleAuthModal();
-            location.reload(); 
+            location.reload();
         }
 
         async function redeemKami() {
             const code = document.getElementById('kami-code').value;
-            if(!code) return showToast("ENTER CODE");
+            if (!code) return showToast("ENTER CODE");
 
             const btn = document.querySelector('#user-section button');
             const originalText = btn.innerText;
@@ -562,8 +646,8 @@
         function toggleAuthModal() {
             const modal = document.getElementById('auth-modal');
             modal.classList.toggle('hidden');
-            if(!modal.classList.contains('hidden')) {
-                checkUserStatus(); 
+            if (!modal.classList.contains('hidden')) {
+                checkUserStatus();
             }
         }
 
@@ -585,13 +669,19 @@
             qrContainer.innerHTML = '';
             qrModal.classList.remove('hidden');
             try {
+                // 找到 showQR 函数内部
                 new QRCode(qrContainer, {
                     text: link,
-                    width: 200,
-                    height: 200,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.L
+                    // 🟢 修改：280 是最佳平衡点，既清晰又不会太大
+                    width: 280,
+                    height: 280,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    // 🟢 修改：必须使用 L (Low) 容错率，否则长链接存不下
+                    correctLevel: QRCode.CorrectLevel.L,
+                    // 🟢 新增：QuietZone 防止二维码贴边太紧，更易扫描 (仅新库支持)
+                    quietZone: 2,
+                    quietZoneColor: '#ffffff'
                 });
             } catch (e) {
                 console.error(e);
@@ -628,4 +718,5 @@
         }
     </script>
 </body>
+
 </html>
