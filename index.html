@@ -646,7 +646,31 @@
         function createNodeCard(node, index) {
             const delay = Math.min(index * 30, 800);
             const cnName = countryMap[node.country] || node.country || '境外';
-            
+
+            // ... 在 createNodeCard 函数内部 ...
+
+// 使用后端传来的中位数延迟
+const latency = node.latency_ms || 0;
+// 强制限制显示的最高速度，双重保险
+const speed = Math.min(node.speed || 0, 100).toFixed(1);
+
+// 状态标识逻辑...
+// ...
+
+const card = document.createElement('div');
+// ... class 定义不变 ...
+card.innerHTML = `
+    <div class="text-right">
+        <div class="font-mono text-xs font-bold ${speedColor}">${speed} <span class="text-[9px] opacity-70">MB/s</span></div>
+
+        <div class="font-mono text-[10px] ${latencyColor} flex items-center justify-end gap-1" id="${nodeId}-latency" title="Server-side Latency (US)">
+            <span class="opacity-50 text-[8px]">⚡</span>
+            ${latencyText}
+        </div>
+    </div>
+
+    `;
+
             // 根据延迟和速度综合评估
             const latency = node.latency_ms || 0;
             const successRate = node.success_rate || 100;
