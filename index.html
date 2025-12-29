@@ -59,24 +59,20 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* 增加了 max-width: 100%; height: auto; */
-        /* 🟢 修复：强制限制二维码最大宽度，防止撑破弹窗 */
+        /* 强制限制二维码最大宽度，防止撑破弹窗 */
         #qrcode {
             width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
-            /* 防止溢出 */
         }
 
         #qrcode img,
         #qrcode canvas {
             display: block;
             max-width: 100% !important;
-            /* 强制不超过父容器 */
             height: auto !important;
-            /* 保持比例 */
             border: 4px solid white;
             border-radius: 4px;
         }
@@ -125,7 +121,6 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <!-- 回国节点按钮 -->
                 <button onclick="openCnModal()" id="cn-btn"
                     class="hidden px-3 py-1.5 bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 rounded-lg text-xs font-mono font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
                     <span class="text-sm">🇨🇳</span> CN LINE
@@ -154,14 +149,34 @@
     </div>
 
     <main class="max-w-7xl mx-auto px-4 pt-24">
-        <div class="flex items-center justify-between mb-6">
-            <div class="glass-card px-5 py-2 rounded-full flex items-center gap-4 text-xs text-gray-400 shadow-lg">
-                <span class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-between mb-6 gap-3">
+            <div class="glass-card px-5 py-2 rounded-full flex items-center gap-4 text-xs text-gray-400 shadow-lg overflow-x-auto">
+                <span class="flex items-center gap-2 whitespace-nowrap">
                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                     NODES: <strong class="text-white font-mono text-sm" id="node-count">--</strong>
                 </span>
+                
                 <span class="w-px h-3 bg-white/10"></span>
-                <span>STATUS: <strong class="text-emerald-400 font-mono" id="user-status-text">GUEST</strong></span>
+                
+                <span class="whitespace-nowrap">STATUS: <strong class="text-emerald-400 font-mono" id="user-status-text">GUEST</strong></span>
+                
+                <span class="w-px h-3 bg-white/10 hidden md:block"></span>
+                
+                <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-cyan-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
+                    </svg>
+                    NET I/O: <strong class="text-cyan-400 font-mono" id="monitor-io">0 KB/s</strong>
+                </span>
+
+                <span class="w-px h-3 bg-white/10 hidden md:block"></span>
+
+                <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                    </svg>
+                    HITS: <strong class="text-amber-400 font-mono" id="monitor-hits">--</strong>
+                </span>
             </div>
         </div>
 
@@ -182,7 +197,6 @@
 
     <textarea id="all-links" class="hidden"></textarea>
 
-    <!-- 二维码弹窗 -->
     <div id="qr-modal" class="fixed inset-0 z-[120] hidden flex items-center justify-center px-4">
         <div class="absolute inset-0 modal-overlay" onclick="closeQR()"></div>
         <div
@@ -197,7 +211,6 @@
         </div>
     </div>
 
-    <!-- 登录/注册弹窗 -->
     <div id="auth-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center px-4">
         <div class="absolute inset-0 modal-overlay" onclick="toggleAuthModal()"></div>
         <div
@@ -221,7 +234,7 @@
                         REGISTER
                     </button>
                 </div>
-            </div>
+                </div>
 
             <div id="user-section" class="hidden space-y-4">
                 <div class="bg-white/5 rounded-lg p-3 border border-white/5">
@@ -258,7 +271,6 @@
         </div>
     </div>
 
-    <!-- 回国节点弹窗 -->
     <div id="cn-modal" class="fixed inset-0 z-[105] hidden flex items-center justify-center px-4">
         <div class="absolute inset-0 modal-overlay" onclick="closeCnModal()"></div>
         <div
@@ -277,8 +289,7 @@
 
             <div class="overflow-y-auto pr-2 custom-scrollbar flex-1">
                 <div id="cn-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- CN Nodes will be rendered here -->
-                </div>
+                    </div>
             </div>
 
             <div class="mt-4 pt-4 border-t border-white/5 text-center">
@@ -298,48 +309,209 @@
         </div>
     </div>
 
+    <div id="identity-modal"
+        class="fixed inset-0 bg-black/95 z-[1000] hidden items-center justify-center backdrop-blur-sm">
+        <div
+            class="bg-gray-900 border-2 border-cyan-500 p-6 rounded-xl max-w-sm w-[90%] shadow-[0_0_50px_rgba(6,182,212,0.4)] relative overflow-hidden">
+
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-cyan-500/20 rounded-full blur-xl"></div>
+
+            <h3 class="text-2xl text-cyan-400 font-bold mb-2 flex items-center gap-2">
+                <span>🆔</span> 身份已生成
+            </h3>
+            <p class="text-gray-400 text-xs mb-4 leading-relaxed">
+                系统已为您创建匿名通行证。<br>
+                <span class="text-red-400 font-bold">⚠️ 请务必保存下方信息，这是您找回账号的唯一凭证！</span>
+            </p>
+
+            <div class="bg-black/60 border border-gray-700 rounded-lg p-4 mb-5 font-mono text-sm relative group">
+                <div class="flex justify-between items-center mb-2 border-b border-gray-800 pb-2">
+                    <span class="text-gray-500">账号 (ID)</span>
+                    <span id="new-username" class="text-green-400 font-bold select-all">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500">密码 (Key)</span>
+                    <span id="new-password" class="text-cyan-400 font-bold select-all">Loading...</span>
+                </div>
+                <div id="copy-tip"
+                    class="absolute inset-0 bg-cyan-900/90 flex items-center justify-center text-cyan-200 font-bold opacity-0 transition-opacity pointer-events-none">
+                    已复制到剪贴板!
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="copyIdentity()"
+                    class="w-full border border-cyan-500/50 hover:bg-cyan-500/10 text-cyan-400 py-2.5 rounded transition-colors flex items-center justify-center gap-2">
+                    <span>📋</span> 一键复制 (Copy)
+                </button>
+                <button onclick="downloadIdentity()"
+                    class="w-full border border-green-500/50 hover:bg-green-500/10 text-green-400 py-2.5 rounded transition-colors flex items-center justify-center gap-2">
+                    <span>💾</span> 下载凭证 (.txt)
+                </button>
+                <button onclick="closeIdentityModal()" id="btn-enter"
+                    class="w-full bg-gray-700 text-gray-500 font-bold py-3 rounded cursor-not-allowed mt-2" disabled>
+                    请先保存账号
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <script>
-        // ==========================================
-        // ⚡️ 配置区域 (请填入你的 Supabase 信息)
-        // ==========================================
+        // ================= 配置区域 =================
         const SUPABASE_URL = 'https://hnlkwtkxbqiakeyienok.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME';
-        // ==========================================
+        
+        // 后端 API 地址 (通过 Cloudflare Tunnel)
+        const VIPER_API_BASE = 'https://api.996828.xyz';
 
-        // 🟢 修复：确保 supabaseClient 初始化安全
         let supabaseClient;
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } else {
-            console.error('Supabase library not loaded!');
-            alert('System Error: Core library failed to load. Please check your connection.');
+            alert('System Error: Supabase SDK failed to load.');
         }
 
         const countryMap = { 'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国', 'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国', 'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚', 'IN': '印度', 'BR': '巴西', 'UNK': '未知' };
-
-        // 全局变量存储节点
         let globalCnNodes = [];
 
-        // 初始化
+        // 启动程序
         fetchData();
+        initTelemetry(); // 启动监控遥测
 
-        // 🟢 新增：获取 VIP 状态
+        // ================= 核心功能函数 =================
+
+        // 1. 获取 VIP 状态
         async function getVipStatus() {
             if (!supabaseClient) return { user: null, isVip: false };
             try {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) return { user: null, isVip: false };
-
                 const { data } = await supabaseClient.from('profiles').select('vip_until').eq('id', user.id).single();
                 const isVip = data?.vip_until && new Date(data.vip_until) > new Date();
                 return { user, isVip, vipDate: data?.vip_until };
             } catch (e) {
-                console.error("Auth check failed:", e);
                 return { user: null, isVip: false };
             }
         }
 
-        // 🟢 新增：更新 UI 状态
+        // 2. 获取节点数据
+        async function fetchData() {
+            const loading = document.getElementById('loading');
+            const grid = document.getElementById('grid');
+            const empty = document.getElementById('empty-state');
+            const cnBtn = document.getElementById('cn-btn');
+
+            loading.classList.remove('hidden');
+            grid.innerHTML = '';
+            empty.classList.add('hidden');
+            cnBtn.classList.add('hidden');
+
+            try {
+                if (!supabaseClient) throw new Error("Supabase client not initialized");
+
+                // A. 身份检查
+                const { user, isVip, vipDate } = await getVipStatus();
+                updateAuthUI(user, isVip, vipDate);
+
+                // B. 节点抓取 (使用 Anon Token 强制混合抓取)
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/nodes?select=content&order=is_free.desc`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                
+                if (!response.ok) throw new Error('Data Fetch Failed');
+                const rawData = await response.json();
+                let nodes = rawData ? rawData.map(item => item.content) : [];
+
+                if (nodes.length === 0) {
+                    loading.classList.add('hidden');
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                // C. 权限过滤
+                if (!isVip) nodes = nodes.slice(0, 20);
+
+                // D. 分类与渲染
+                globalCnNodes = nodes.filter(n => n.country === 'CN');
+                const normalNodes = nodes.filter(n => n.country !== 'CN');
+
+                if (globalCnNodes.length > 0) cnBtn.classList.remove('hidden');
+
+                updateStats(nodes);
+                renderNodes(normalNodes);
+                loading.classList.add('hidden');
+
+            } catch (err) {
+                console.error(err);
+                loading.innerHTML = `<span class="text-red-500 text-sm font-mono">CONNECTION FAILED: ${err.message}</span>`;
+            }
+        }
+
+        // ================= 📡 [新增] 实时监控遥测逻辑 =================
+        let lastBytesTotal = 0;
+        let lastCheckTime = 0;
+
+        async function initTelemetry() {
+            // 每 3 秒刷新一次数据
+            setInterval(updateMonitorStats, 3000);
+            updateMonitorStats(); // 立即执行一次
+        }
+
+        async function updateMonitorStats() {
+            try {
+                // 1. 获取系统监控 (Network I/O)
+                // 假设后端 endpoint 为 /api/system/monitor 或类似
+                // 这里的路径基于 Shadow-Viper 的 monitor.py 模块推测
+                const sysRes = await fetch(`${VIPER_API_BASE}/api/system/monitor`); 
+                if(sysRes.ok) {
+                    const sysData = await sysRes.json();
+                    // sysData 预期格式: { network: { bytes_sent: 123, bytes_recv: 456 }, ... }
+                    if(sysData.network) {
+                        const currentTotal = (sysData.network.bytes_sent || 0) + (sysData.network.bytes_recv || 0);
+                        const now = Date.now();
+                        
+                        // 计算速度 (Throughput)
+                        if (lastBytesTotal > 0 && lastCheckTime > 0) {
+                            const deltaBytes = currentTotal - lastBytesTotal;
+                            const deltaTime = (now - lastCheckTime) / 1000; // 秒
+                            if(deltaTime > 0) {
+                                const speedBps = deltaBytes / deltaTime;
+                                document.getElementById('monitor-io').innerText = formatSpeed(speedBps);
+                            }
+                        }
+                        
+                        lastBytesTotal = currentTotal;
+                        lastCheckTime = now;
+                    }
+                }
+
+                // 2. 获取 API 热度 (Visitor Count)
+                // 基于 visitor_tracker 模块
+                const visitRes = await fetch(`${VIPER_API_BASE}/api/visitor/stats`);
+                if(visitRes.ok) {
+                    const visitData = await visitRes.json();
+                    // visitData 预期格式: { total_visitors: 1234 }
+                    if(visitData.total_visitors !== undefined) {
+                        document.getElementById('monitor-hits').innerText = visitData.total_visitors.toLocaleString();
+                    }
+                }
+
+            } catch (e) {
+                // 静默失败，不影响主业务
+                console.warn("[Telemetry] Fetch failed:", e);
+                // 失败时显示 --
+                // document.getElementById('monitor-io').innerText = "--";
+            }
+        }
+
+        function formatSpeed(bytesPerSec) {
+            if(bytesPerSec < 1024) return bytesPerSec.toFixed(0) + " B/s";
+            if(bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + " KB/s";
+            return (bytesPerSec / (1024 * 1024)).toFixed(2) + " MB/s";
+        }
+
+        // ================= UI 更新逻辑 =================
         function updateAuthUI(user, isVip, vipDate) {
             const loginSection = document.getElementById('login-section');
             const userSection = document.getElementById('user-section');
@@ -352,7 +524,6 @@
                 loginSection.classList.add('hidden');
                 userSection.classList.remove('hidden');
                 document.getElementById('current-email').innerText = user.email;
-
                 if (isVip) {
                     statusText.innerText = "VIP MEMBER";
                     statusText.className = "text-amber-400 font-mono";
@@ -378,110 +549,36 @@
             }
         }
 
-        // 核心：获取数据 (Supabase 版)
-        async function fetchData() {
-            const loading = document.getElementById('loading');
-            const grid = document.getElementById('grid');
-            const empty = document.getElementById('empty-state');
-            const cnBtn = document.getElementById('cn-btn');
-
-            loading.classList.remove('hidden');
-            grid.innerHTML = '';
-            empty.classList.add('hidden');
-            cnBtn.classList.add('hidden'); // 先隐藏回国按钮
-
-            try {
-                if (!supabaseClient) throw new Error("Supabase client not initialized");
-
-                // 1. 先检查用户状态
-                const { user, isVip, vipDate } = await getVipStatus();
-                updateAuthUI(user, isVip, vipDate);
-
-                // 2. 获取数据
-                const { data, error } = await supabaseClient
-                    .from('nodes')
-                    .select('content')
-                    .order('is_free', { ascending: false }); // 免费的排前面
-
-                loading.classList.add('hidden');
-
-                if (error) throw error;
-
-                // 提取 JSON 内容
-                let nodes = data ? data.map(item => item.content) : [];
-
-                if (nodes.length === 0) {
-                    empty.classList.remove('hidden');
-                    return;
-                }
-
-                // 🟢 修复：非 VIP 只显示 20 个
-                if (!isVip) {
-                    nodes = nodes.slice(0, 20);
-                }
-
-                // 🟢 分离回国节点
-                globalCnNodes = nodes.filter(n => n.country === 'CN');
-                const normalNodes = nodes.filter(n => n.country !== 'CN');
-
-                // 如果有回国节点，显示按钮
-                if (globalCnNodes.length > 0) {
-                    cnBtn.classList.remove('hidden');
-                }
-
-                updateStats(nodes); // 统计总数（包含回国）
-                renderNodes(normalNodes); // 主列表只渲染非回国节点
-
-            } catch (err) {
-                console.error(err);
-                loading.innerHTML = `<span class="text-red-500 text-sm font-mono">CONNECTION FAILED: ${err.message}</span>`;
-            }
-        }
-
-        // 渲染节点卡片 (主列表)
+        // 渲染节点卡片
         function renderNodes(data) {
             const grid = document.getElementById('grid');
-            grid.innerHTML = ''; // 清空
+            grid.innerHTML = '';
             if (data.length === 0) {
                 document.getElementById('empty-state').classList.remove('hidden');
                 return;
             }
-
             data.forEach((node, index) => {
-                const card = createNodeCard(node, index);
-                grid.appendChild(card);
+                grid.appendChild(createNodeCard(node, index));
             });
         }
-
-        // 渲染回国节点 (弹窗列表)
         function renderCnNodes() {
             const grid = document.getElementById('cn-grid');
             grid.innerHTML = '';
             globalCnNodes.forEach((node, index) => {
-                const card = createNodeCard(node, index);
-                grid.appendChild(card);
+                grid.appendChild(createNodeCard(node, index));
             });
         }
-
-        // 创建节点卡片 DOM
         function createNodeCard(node, index) {
             const delay = Math.min(index * 30, 800);
             const cnName = countryMap[node.country] || node.country || '境外';
-
             let speedColor = 'text-gray-500', barColor = 'bg-gray-700', glowClass = '';
-            if (node.speed > 5) {
-                speedColor = 'text-emerald-400'; barColor = 'bg-emerald-500';
-                glowClass = 'shadow-[0_0_8px_rgba(16,185,129,0.4)]';
-            } else if (node.speed > 2) {
-                speedColor = 'text-amber-400'; barColor = 'bg-amber-500';
-            } else if (node.speed > 0) {
-                speedColor = 'text-rose-400'; barColor = 'bg-rose-500';
-            }
+            if (node.speed > 5) { speedColor = 'text-emerald-400'; barColor = 'bg-emerald-500'; glowClass = 'shadow-[0_0_8px_rgba(16,185,129,0.4)]'; }
+            else if (node.speed > 2) { speedColor = 'text-amber-400'; barColor = 'bg-amber-500'; }
+            else if (node.speed > 0) { speedColor = 'text-rose-400'; barColor = 'bg-rose-500'; }
 
             const card = document.createElement('div');
             card.className = "glass-card rounded-xl p-4 relative group hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-[160px] animate-fade-in hover:shadow-lg hover:shadow-emerald-900/10";
             card.style.animationDelay = `${delay}ms`;
-
             card.innerHTML = `
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex items-center gap-2.5">
@@ -494,118 +591,98 @@
                         </div>
                     </div>
                     <div class="text-right">
-                            <div class="font-mono text-xs font-bold ${speedColor}">${node.speed} <span class="text-[9px] opacity-70">MB/s</span></div>
+                        <div class="font-mono text-xs font-bold ${speedColor}">${node.speed} <span class="text-[9px] opacity-70">MB/s</span></div>
                     </div>
                 </div>
-                <div class="text-[10px] text-gray-500 font-mono truncate mb-3 flex items-center gap-1.5 px-1 border-l-2 border-white/5 pl-2 ml-1">
-                    ${node.host}:${node.port}
-                </div>
+                <div class="text-[10px] text-gray-500 font-mono truncate mb-3 flex items-center gap-1.5 px-1 border-l-2 border-white/5 pl-2 ml-1">${node.host}:${node.port}</div>
                 <div class="h-1 w-full bg-black/40 rounded-full overflow-hidden mb-auto">
                     <div class="h-full ${barColor} ${glowClass} transition-all duration-700" style="width: ${Math.min(node.speed * 8, 100)}%"></div>
                 </div>
                 <div class="grid grid-cols-4 gap-2 mt-3">
-                    <button onclick="copyLink('${node.link}')" class="col-span-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] tracking-wide">
-                        COPY LINK
-                    </button>
+                    <button onclick="copyLink('${node.link}')" class="col-span-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] tracking-wide">COPY LINK</button>
                     <button onclick="showQR('${node.link}', '${cnName} ${node.protocol}')" class="col-span-1 py-1.5 rounded-lg text-xs flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/5 transition-all active:scale-[0.98]">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                     </button>
                 </div>
             `;
             return card;
         }
 
+        // 辅助功能
         function updateStats(data) {
             document.getElementById('node-count').innerText = data.length;
             document.getElementById('all-links').value = data.map(n => n.link).join('\n');
         }
+        function getFlagEmoji(code) {
+            if (!code || code === 'UNK') return '🌐';
+            const codePoints = code.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
+            return String.fromCodePoint(...codePoints);
+        }
+        function copyLink(text) { navigator.clipboard.writeText(text).then(() => showToast('LINK COPIED')); }
+        function copyAll() { navigator.clipboard.writeText(document.getElementById("all-links").value).then(() => showToast(`ALL NODES COPIED`)); }
 
-        // ==========================================
-        // 🔐 认证与卡密逻辑
-        // ==========================================
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 2000);
+        }
 
-        // 兼容旧调用
+        // ================= 交互与弹窗 =================
+        function toggleAuthModal() {
+            const modal = document.getElementById('auth-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) checkUserStatus();
+        }
+        function openCnModal() { renderCnNodes(); document.getElementById('cn-modal').classList.remove('hidden'); }
+        function closeCnModal() { document.getElementById('cn-modal').classList.add('hidden'); }
+        function closeQR() { document.getElementById('qr-modal').classList.add('hidden'); }
+
+        const qrContainer = document.getElementById('qrcode');
+        function showQR(link, title) {
+            document.getElementById('qr-title').innerText = title;
+            document.getElementById('qr-link-preview').innerText = link;
+            qrContainer.innerHTML = '';
+            document.getElementById('qr-modal').classList.remove('hidden');
+            try {
+                new QRCode(qrContainer, { text: link, width: 280, height: 280, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L, quietZone: 2, quietZoneColor: '#ffffff' });
+            } catch (e) { console.error(e); }
+        }
+
+        // ================= 登录注册逻辑 =================
         async function checkUserStatus() {
             const { user, isVip, vipDate } = await getVipStatus();
             updateAuthUI(user, isVip, vipDate);
         }
 
         async function handleLogin() {
-            console.log("Login attempt...");
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             if (!email || !password) return showToast("MISSING CREDENTIALS");
-
             try {
                 const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-                if (error) {
-                    console.error("Login Error:", error);
-                    if (error.message.includes("Invalid login credentials")) {
-                        showToast("WRONG EMAIL OR PASSWORD");
-                    } else if (error.message.includes("Email not confirmed")) {
-                        showToast("PLEASE CONFIRM EMAIL");
-                    } else {
-                        showToast("LOGIN FAILED: " + error.message);
-                    }
-                } else {
-                    showToast("ACCESS GRANTED");
-                    toggleAuthModal();
-                    fetchData();
-                }
-            } catch (e) {
-                console.error("System Error:", e);
-                showToast("SYSTEM ERROR");
-            }
+                if (error) throw error;
+                showToast("ACCESS GRANTED");
+                toggleAuthModal();
+                fetchData();
+            } catch (e) { showToast("LOGIN FAILED"); }
         }
 
         async function handleRegister() {
-            console.log("Register attempt...");
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-
             if (!email || !password) return showToast("MISSING CREDENTIALS");
-            if (password.length < 6) return showToast("PASSWORD MIN 6 CHARS");
-
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) return showToast("INVALID EMAIL FORMAT");
-
             try {
-                const { data, error } = await supabaseClient.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        emailRedirectTo: window.location.origin
-                    }
-                });
-
-                if (error) {
-                    console.error("Register Error:", error);
-                    if (error.message.includes("User already registered")) {
-                        showToast("ACCOUNT EXISTS - PLEASE LOGIN");
-                    } else if (error.status === 422 || error.message.includes("password")) {
-                        showToast("WEAK PASSWORD");
-                    } else if (error.status === 400) {
-                        showToast("INVALID DATA: " + error.message);
-                    } else {
-                        showToast("ERROR: " + error.message);
-                    }
-                } else {
-                    console.log("Register Success:", data);
-                    if (data?.session) {
-                        showToast("REGISTRATION SUCCESSFUL");
-                        toggleAuthModal();
-                        fetchData();
-                    } else if (data?.user) {
-                        showToast("CHECK EMAIL TO CONFIRM");
-                    }
-                }
-            } catch (e) {
-                console.error("System Error:", e);
-                showToast("SYSTEM ERROR");
-            }
+                const { data, error } = await supabaseClient.auth.signUp({ email, password });
+                if (error) throw error;
+                if (data.session) {
+                    showToast("REGISTRATION SUCCESSFUL");
+                    toggleAuthModal();
+                    fetchData();
+                } else showToast("CHECK EMAIL");
+            } catch (e) { showToast("ERROR: " + e.message); }
         }
 
         async function handleLogout() {
@@ -617,106 +694,139 @@
         async function redeemKami() {
             const code = document.getElementById('kami-code').value;
             if (!code) return showToast("ENTER CODE");
-
-            const btn = document.querySelector('#user-section button');
-            const originalText = btn.innerText;
-            btn.innerText = "...";
-
             try {
                 const { data, error } = await supabaseClient.rpc('redeem_kami', { code_input: code });
-
-                if (error) {
-                    showToast("ERROR: " + error.message);
-                } else {
-                    showToast(data || "ACTIVATED");
-                    checkUserStatus();
-                    fetchData();
-                }
-            } catch (e) {
-                console.error(e);
-                showToast("SYSTEM ERROR");
-            }
-            btn.innerText = originalText;
-        }
-
-        // ==========================================
-        // 🛠 辅助功能
-        // ==========================================
-
-        function toggleAuthModal() {
-            const modal = document.getElementById('auth-modal');
-            modal.classList.toggle('hidden');
-            if (!modal.classList.contains('hidden')) {
+                if (error) throw error;
+                showToast(data || "ACTIVATED");
                 checkUserStatus();
+                fetchData();
+            } catch (e) { showToast("SYSTEM ERROR"); }
+        }
+
+        // ================= 🚀 [极速接入] 幽灵注入与处理逻辑 =================
+
+        // 1. 业务逻辑
+        async function handleQuickStart() {
+            const btn = document.getElementById('ghost-quick-btn');
+            let originalText = '';
+            if(btn) {
+                originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="animate-spin">↻</span> 系统接入中...';
+                btn.disabled = true;
             }
-        }
 
-        // 回国节点弹窗控制
-        function openCnModal() {
-            renderCnNodes();
-            document.getElementById('cn-modal').classList.remove('hidden');
-        }
-        function closeCnModal() {
-            document.getElementById('cn-modal').classList.add('hidden');
-        }
-
-        const qrModal = document.getElementById('qr-modal');
-        const qrContainer = document.getElementById('qrcode');
-
-        function showQR(link, title) {
-            document.getElementById('qr-title').innerText = title;
-            document.getElementById('qr-link-preview').innerText = link;
-            qrContainer.innerHTML = '';
-            qrModal.classList.remove('hidden');
             try {
-                // 找到 showQR 函数内部
-                new QRCode(qrContainer, {
-                    text: link,
-                    // 🟢 修改：280 是最佳平衡点，既清晰又不会太大
-                    width: 280,
-                    height: 280,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    // 🟢 修改：必须使用 L (Low) 容错率，否则长链接存不下
-                    correctLevel: QRCode.CorrectLevel.L,
-                    // 🟢 新增：QuietZone 防止二维码贴边太紧，更易扫描 (仅新库支持)
-                    quietZone: 2,
-                    quietZoneColor: '#ffffff'
+                const timestamp = Date.now().toString().slice(-4);
+                const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+                const username = `VIPER-${randomStr}-${timestamp}`;
+                const password = `Viper#${Date.now().toString(36).slice(-8)}!`;
+                // 使用 shadow-network 域名，看起来更专业
+                const email = `agent.${randomStr.toLowerCase()}.${timestamp}@shadow-network.com`;
+
+                console.log(`[QuickStart] Generating Identity: ${username}`);
+
+                // 注册
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email, password: password,
+                    options: { data: { username: username } }
                 });
-            } catch (e) {
-                console.error(e);
+
+                if (error) throw error;
+
+                // 自动登录 (无需二次 signIn，signUp 在关闭验证时会直接返回 session)
+                if (!data.session) {
+                    // 如果万一没返回session，补刀登录
+                    const { error: loginError } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (loginError) throw loginError;
+                }
+
+                // 本地记忆
+                localStorage.setItem('shadow_user_email', email);
+                localStorage.setItem('shadow_user_pass', password);
+
+                // UI 反馈
+                showIdentityCard(username, password);
+                document.getElementById('auth-modal').classList.add('hidden');
+                
+                // 刷新数据以应用登录状态
+                fetchData();
+
+            } catch (err) {
+                console.error(err);
+                alert('接入中断: ' + err.message);
+                if(btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
             }
         }
 
-        function closeQR() { qrModal.classList.add('hidden'); }
-
-        function getFlagEmoji(countryCode) {
-            if (!countryCode || countryCode === 'UNK') return '🌐';
-            const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
-            return String.fromCodePoint(...codePoints);
+        // 2. 身份卡显示
+        function showIdentityCard(user, pass) {
+            document.getElementById('new-username').innerText = user;
+            document.getElementById('new-password').innerText = pass;
+            window.currentIdentity = { user, pass };
+            
+            const modal = document.getElementById('identity-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
-        function copyLink(text) {
-            navigator.clipboard.writeText(text).then(() => showToast('LINK COPIED'));
+        // 3. 复制与下载
+        function copyIdentity() {
+            const { user, pass } = window.currentIdentity;
+            navigator.clipboard.writeText(`ID: ${user}\nKey: ${pass}`).then(() => {
+                const tip = document.getElementById('copy-tip');
+                tip.classList.remove('opacity-0');
+                setTimeout(() => tip.classList.add('opacity-0'), 1500);
+                enableEnterButton();
+            });
+        }
+        function downloadIdentity() {
+            const { user, pass } = window.currentIdentity;
+            const text = `=== Shadow Nexus ===\nID: ${user}\nKey: ${pass}\nGenerated: ${new Date().toLocaleString()}`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Shadow-ID-${user}.txt`;
+            a.click();
+            enableEnterButton();
+        }
+        function enableEnterButton() {
+            const btn = document.getElementById('btn-enter');
+            btn.disabled = false;
+            btn.innerText = "我已保存，进入系统 (Enter)";
+            btn.classList.remove('bg-gray-700', 'text-gray-500', 'cursor-not-allowed');
+            btn.classList.add('bg-cyan-600', 'text-white', 'hover:bg-cyan-500');
+        }
+        function closeIdentityModal() {
+            document.getElementById('identity-modal').classList.add('hidden');
+            // 此时已经是登录状态，直接刷新数据即可，无需重载页面
+            fetchData();
         }
 
-        function copyAll() {
-            const text = document.getElementById("all-links").value;
-            if (!text) return showToast('NO DATA');
-            navigator.clipboard.writeText(text).then(() => showToast(`ALL NODES COPIED`));
+        // 4. [幽灵注入器]
+        function injectGhostButton() {
+            const btnContainer = document.querySelector('#login-section .flex.gap-3');
+            if (btnContainer && !document.getElementById('ghost-quick-btn')) {
+                const quickBtn = document.createElement('button');
+                quickBtn.id = 'ghost-quick-btn';
+                quickBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                    </svg>
+                    极速接入 (Quick Start)
+                `;
+                quickBtn.className = "w-full mt-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-sm";
+                quickBtn.onclick = handleQuickStart;
+                btnContainer.parentNode.insertBefore(quickBtn, btnContainer.nextSibling);
+            }
         }
 
-        let toastTimeout;
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-msg').innerText = msg;
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            if (toastTimeout) clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 2000);
-        }
+        const observer = new MutationObserver((mutations) => injectGhostButton());
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+        setTimeout(injectGhostButton, 500);
+
     </script>
 </body>
-
 </html>
