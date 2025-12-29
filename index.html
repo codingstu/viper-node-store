@@ -643,51 +643,30 @@
                 grid.appendChild(createNodeCard(node, index));
             });
         }
-        function createNodeCard(node, index) {
+      function createNodeCard(node, index) {
             const delay = Math.min(index * 30, 800);
             const cnName = countryMap[node.country] || node.country || '境外';
 
-            // ... 在 createNodeCard 函数内部 ...
-
-// 使用后端传来的中位数延迟
-const latency = node.latency_ms || 0;
-// 强制限制显示的最高速度，双重保险
-const speed = Math.min(node.speed || 0, 100).toFixed(1);
-
-// 状态标识逻辑...
-// ...
-
-const card = document.createElement('div');
-// ... class 定义不变 ...
-card.innerHTML = `
-    <div class="text-right">
-        <div class="font-mono text-xs font-bold ${speedColor}">${speed} <span class="text-[9px] opacity-70">MB/s</span></div>
-
-        <div class="font-mono text-[10px] ${latencyColor} flex items-center justify-end gap-1" id="${nodeId}-latency" title="Server-side Latency (US)">
-            <span class="opacity-50 text-[8px]">⚡</span>
-            ${latencyText}
-        </div>
-    </div>
-
-    `;
-
-            // 根据延迟和速度综合评估
+            // 1. 获取基础数据 (这里只定义一次，防止报错)
             const latency = node.latency_ms || 0;
             const successRate = node.success_rate || 100;
-            const speed = node.speed || 0;
-            
-            // 如果有质量评分就用，否则根据速度估算
+
+            // 2. 修正速度显示 (强制限制在 100MB/s 以内，保留1位小数)
+            const rawSpeed = node.speed || 0;
+            const displaySpeed = Math.min(rawSpeed, 100).toFixed(1);
+
+            // 3. 计算质量评分 (如果没有后端评分，进行前端估算)
             let qualityScore = node.quality_score;
             if (qualityScore === undefined || qualityScore === null) {
-                // 根据速度估算质量 (没有测试数据时的回退方案)
-                if (speed >= 10) qualityScore = 80;
-                else if (speed >= 5) qualityScore = 60;
-                else if (speed >= 2) qualityScore = 40;
+                if (rawSpeed >= 10) qualityScore = 80;
+                else if (rawSpeed >= 5) qualityScore = 60;
+                else if (rawSpeed >= 2) qualityScore = 40;
                 else qualityScore = 20;
             }
-            
+
+            // 4. 样式状态判定
             let speedColor = 'text-gray-500', barColor = 'bg-gray-700', glowClass = '', statusBadge = '';
-            
+
             if (qualityScore >= 70) {
                 speedColor = 'text-emerald-400';
                 barColor = 'bg-emerald-500';
@@ -702,18 +681,19 @@ card.innerHTML = `
                 barColor = 'bg-rose-500';
                 statusBadge = '<span class="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full"></span>';
             }
-            
-            // 延迟显示
+
+            // 5. 延迟显示文本
             const latencyText = latency > 0 ? `${Math.round(latency)}ms` : '--';
             const latencyColor = latency > 0 ? (latency < 300 ? 'text-emerald-400' : latency < 800 ? 'text-amber-400' : 'text-rose-400') : 'text-gray-500';
-            
-            // 唯一ID用于测试按钮
+
             const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-');
 
             const card = document.createElement('div');
             card.className = "glass-card rounded-xl p-4 relative group hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-[180px] animate-fade-in hover:shadow-lg hover:shadow-emerald-900/10";
             card.style.animationDelay = `${delay}ms`;
             card.id = nodeId;
+
+            // 6. 组装 HTML
             card.innerHTML = `
                 ${statusBadge}
                 <div class="flex justify-between items-start mb-2">
@@ -728,8 +708,11 @@ card.innerHTML = `
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="font-mono text-xs font-bold ${speedColor}">${node.speed} <span class="text-[9px] opacity-70">MB/s</span></div>
-                        <div class="font-mono text-[10px] ${latencyColor}" id="${nodeId}-latency">${latencyText}</div>
+                        <div class="font-mono text-xs font-bold ${speedColor}">${displaySpeed} <span class="text-[9px] opacity-70">MB/s</span></div>
+                        <div class="font-mono text-[10px] ${latencyColor} flex items-center justify-end gap-1" id="${nodeId}-latency" title="Server-side Latency (US)">
+                            <span class="opacity-50 text-[8px]">⚡</span>
+                            ${latencyText}
+                        </div>
                     </div>
                 </div>
                 <div class="text-[10px] text-gray-500 font-mono truncate mb-2 flex items-center gap-1.5 px-1 border-l-2 border-white/5 pl-2 ml-1">${node.host}:${node.port}</div>
@@ -745,7 +728,6 @@ card.innerHTML = `
             `;
             return card;
         }
-        
         
         // ================= 筛选与排序功能 =================
         
