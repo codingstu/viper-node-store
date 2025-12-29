@@ -381,16 +381,26 @@
 
         // ================= 核心功能函数 =================
 
-        // 1. 获取 VIP 状态
+        // 1. [关键修复] 获取 VIP 状态
         async function getVipStatus() {
             if (!supabaseClient) return { user: null, isVip: false };
             try {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) return { user: null, isVip: false };
-                const { data } = await supabaseClient.from('profiles').select('vip_until').eq('id', user.id).single();
+                
+                // 🔥 [修复点] 将 .single() 改为 .maybeSingle()
+                // 解释：新用户(QuickStart)在profiles表里可能还没数据。
+                // .single() 没找到会报 406 错误，.maybeSingle() 没找到会返回 null (视为普通用户)，不会报错。
+                const { data } = await supabaseClient
+                    .from('profiles')
+                    .select('vip_until')
+                    .eq('id', user.id)
+                    .maybeSingle(); 
+
                 const isVip = data?.vip_until && new Date(data.vip_until) > new Date();
                 return { user, isVip, vipDate: data?.vip_until };
             } catch (e) {
+                console.warn("VIP check failed:", e); // 仅警告，不阻断流程
                 return { user: null, isVip: false };
             }
         }
@@ -448,7 +458,7 @@
             }
         }
 
-        // ================= 📡 [新增] 实时监控遥测逻辑 =================
+        // ================= 📡 实时监控遥测逻辑 =================
         let lastBytesTotal = 0;
         let lastCheckTime = 0;
 
@@ -461,12 +471,9 @@
         async function updateMonitorStats() {
             try {
                 // 1. 获取系统监控 (Network I/O)
-                // 假设后端 endpoint 为 /api/system/monitor 或类似
-                // 这里的路径基于 Shadow-Viper 的 monitor.py 模块推测
                 const sysRes = await fetch(`${VIPER_API_BASE}/api/system/monitor`); 
                 if(sysRes.ok) {
                     const sysData = await sysRes.json();
-                    // sysData 预期格式: { network: { bytes_sent: 123, bytes_recv: 456 }, ... }
                     if(sysData.network) {
                         const currentTotal = (sysData.network.bytes_sent || 0) + (sysData.network.bytes_recv || 0);
                         const now = Date.now();
@@ -474,7 +481,7 @@
                         // 计算速度 (Throughput)
                         if (lastBytesTotal > 0 && lastCheckTime > 0) {
                             const deltaBytes = currentTotal - lastBytesTotal;
-                            const deltaTime = (now - lastCheckTime) / 1000; // 秒
+                            const deltaTime = (now - lastCheckTime) / 1000;
                             if(deltaTime > 0) {
                                 const speedBps = deltaBytes / deltaTime;
                                 document.getElementById('monitor-io').innerText = formatSpeed(speedBps);
@@ -487,11 +494,9 @@
                 }
 
                 // 2. 获取 API 热度 (Visitor Count)
-                // 基于 visitor_tracker 模块
                 const visitRes = await fetch(`${VIPER_API_BASE}/api/visitor/stats`);
                 if(visitRes.ok) {
                     const visitData = await visitRes.json();
-                    // visitData 预期格式: { total_visitors: 1234 }
                     if(visitData.total_visitors !== undefined) {
                         document.getElementById('monitor-hits').innerText = visitData.total_visitors.toLocaleString();
                     }
@@ -499,9 +504,7 @@
 
             } catch (e) {
                 // 静默失败，不影响主业务
-                console.warn("[Telemetry] Fetch failed:", e);
-                // 失败时显示 --
-                // document.getElementById('monitor-io').innerText = "--";
+                // console.warn("[Telemetry] Fetch failed:", e);
             }
         }
 
