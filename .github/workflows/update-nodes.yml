@@ -11,6 +11,10 @@ on:
       - 'update_nodes.py'
       - '.github/workflows/update-nodes.yml'
 
+# 添加写入权限
+permissions:
+  contents: write
+
 jobs:
   update-nodes:
     runs-on: ubuntu-latest
@@ -19,6 +23,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -48,9 +54,4 @@ jobs:
           
           if git diff --quiet public/nodes.json; then
             echo "No changes to nodes.json"
-          else
-            git add public/nodes.json
-            git commit -m "chore: auto-update nodes.json with latest test results"
-            git push
-            echo "✅ nodes.json updated and pushed"
-          fi
+          
