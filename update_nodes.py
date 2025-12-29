@@ -37,6 +37,9 @@ API_URL = os.environ.get("SHADOW_VIPER_API", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
+# 新增配置
+CF_WORKER_URL = os.environ.get("CF_WORKER_URL", "https://patient-bonus-f141.sdemon9963.workers.dev")
+CF_SECRET = os.environ.get("CF_SECRET", "viper-speed-2025") # 与 Worker 里的密码一致
 
 # =================== 核心测试函数 ===================
 
@@ -268,6 +271,87 @@ def save_public_json(nodes: List[Dict]):
         json.dump(mini_nodes, f)
 
 
+async def test_nodes_via_cloudflare(nodes: List[Dict]) -> List[Dict]:
+    """
+    代理测速: 将节点列表分批发送给 Cloudflare Worker 进行测试
+    """
+    print(f"\n🌍 启动云端边缘测速 (Cloudflare Workers)...")
+
+    valid_nodes = []
+    batch_size = 10  # CF Worker 每次处理的数量不宜过多，防止超时
+
+    async with aiohttp.ClientSession() as session:
+        # 分批处理
+        for i in range(0, len(nodes), batch_size):
+            batch = nodes[i:i + batch_size]
+
+            # 构造发送给 Worker 的数据 Payload
+            payload = []
+            for n in batch:
+                payload.append({
+                    "id": f"{n['host']}:{n['port']}",  # 用于回溯识别
+                    "host": n['host'],
+                    "port": int(n['port'])
+                })
+
+            try:
+                print(f"   📤 发送批次 {i // batch_size + 1} ({len(batch)} 个节点)...")
+                start_time = time.time()
+
+                async with session.post(
+                        CF_WORKER_URL,
+                        json=payload,
+                        headers={"x-secret": CF_SECRET},
+                        timeout=10  # 给 Worker 足够的运行时间
+                ) as resp:
+                    if resp.status == 200:
+                        results = await resp.json()
+
+                        # 解析结果并回填
+                        for res in results:
+                            # 找到原始节点对象
+                            original_node = next((n for n in batch if f"{n['host']}:{n['port']}" == res['id']), None)
+                            if original_node and res['success']:
+                                # 修正: CF 测出来的延迟通常比较低，且比较稳定
+                                latency = res['latency']
+
+                                # 重新计算质量分 (逻辑与之前类似，但基于 CF 数据)
+                                # 假设 CF 到国内节点的平均延迟是 X，这里拿到的数据会比 GitHub 直连更真实
+                                original_node['latency_ms'] = latency
+                                original_node['success_rate'] = 1.0  # CF 能连上通常算 100%
+
+                                # 简单的速度估算
+                                if latency < 100:
+                                    original_node['speed'] = 20.0
+                                elif latency < 200:
+                                    original_node['speed'] = 10.0
+                                else:
+                                    original_node['speed'] = 5.0
+
+                                # 计算分数
+                                original_node['quality_score'] = max(0, 100 - (latency / 5))
+                                original_node['updated_at'] = datetime.now().isoformat()
+
+                                valid_nodes.append(original_node)
+                                print(f"     ✅ {original_node['host']} | Latency: {latency}ms (CF Edge)")
+                    else:
+                        print(f"     ❌ Worker 返回错误: {resp.status}")
+
+            except Exception as e:
+                print(f"     ⚠️ 批次请求失败: {e}")
+
+            # 稍微休息一下，防止触发 CF 的速率限制
+            await asyncio.sleep(1)
+
+    print(f"✅ 云端测试完成: {len(valid_nodes)} / {len(nodes)} 个节点存活")
+
+    # 排序
+    valid_nodes.sort(key=lambda x: x.get("quality_score", 0), reverse=True)
+    return valid_nodes
+
+
+
+
 async def main():
     start = time.time()
 
@@ -275,7 +359,9 @@ async def main():
     if not raw_nodes:
         return
 
-    valid_nodes = await test_all_nodes(raw_nodes)
+        # 🔥 替换: 不再调用 test_all_nodes (本地/GitHub测速)
+        # 而是调用新的云端测速
+        valid_nodes = await test_nodes_via_cloudflare(raw_nodes)
 
     if valid_nodes:
         save_to_supabase(valid_nodes)
