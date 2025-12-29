@@ -4,7 +4,7 @@
     "host": "yd2.ainivp.com",
     "port": 33202,
     "country": "CN",
-    "speed": 10.83,
+    "speed": 10.19,
     "name": "🇨🇳CN-120.232.17.70-0246",
     "link": "vmess://eyJ2IjoiMiIsInBzIjoiXHVkODNjXHVkZGU4XHVkODNjXHVkZGYzQ04tMTIwLjIzMi4xNy43MC0wMjQ2IiwiYWRkIjoieWQyLmFpbml2cC5jb20iLCJwb3J0IjozMzIwMiwiaWQiOiI5MjA0YWZjZC0wMjNlLTc4MWYtMWFiYy1jMTJlZmNjZDEzNDQiLCJhaWQiOjAsIm5ldCI6IndzIiwidHlwZSI6Im5vbmUiLCJ0bHMiOiJ0bHMiLCJwYXRoIjoiL3JheSIsInNuaSI6InlkMi5haW5pdnAuY29tIn0="
   },
@@ -13,7 +13,7 @@
     "host": "zz6.91js.pw",
     "port": 10051,
     "country": "CN",
-    "speed": 5.87,
+    "speed": 9.02,
     "name": "🇨🇳CN-117.149.198.190-7412",
     "link": "trojan://a13820c547fa34c5c45515c12f0cd576@zz6.91js.pw:10051?sni=&allowInsecure=1#🇨🇳CN-117.149.198.190-7412"
   },
@@ -22,7 +22,7 @@
     "host": "official.tokyometropolis.odesa.ua",
     "port": 2053,
     "country": "CN",
-    "speed": 7.02,
+    "speed": 17.84,
     "name": "🇨🇳CN-120.241.226.94-2560",
     "link": "trojan://96983eb4-c8f1-316e-ab00-500014ed3d8b@official.tokyometropolis.odesa.ua:2053?sni=&allowInsecure=1#🇨🇳CN-120.241.226.94-2560"
   },
@@ -31,7 +31,7 @@
     "host": "official.taipeicitygovernment.co.ua",
     "port": 8443,
     "country": "CN",
-    "speed": 24.41,
+    "speed": 34.73,
     "name": "🇨🇳CN-120.241.226.93-2571",
     "link": "trojan://96983eb4-c8f1-316e-ab00-500014ed3d8b@official.taipeicitygovernment.co.ua:8443?sni=&allowInsecure=1#🇨🇳CN-120.241.226.93-2571"
   },
@@ -40,7 +40,7 @@
     "host": "official.tokyometropolis.kherson.ua",
     "port": 2053,
     "country": "CN",
-    "speed": 29.23,
+    "speed": 15.58,
     "name": "🇨🇳CN-120.241.226.93-2693",
     "link": "trojan://96983eb4-c8f1-316e-ab00-500014ed3d8b@official.tokyometropolis.kherson.ua:2053?sni=&allowInsecure=1#🇨🇳CN-120.241.226.93-2693"
   }
