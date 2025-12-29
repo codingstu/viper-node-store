@@ -197,21 +197,55 @@ async def test_all_nodes(nodes: List[Dict]) -> List[Dict]:
 
 async def fetch_nodes_from_api() -> List[Dict]:
     """
-    从 API 获取原始节点列表
+    从 API 获取原始节点列表 (带重试机制)
     """
     if not API_URL:
         raise ValueError("SHADOW_VIPER_API 环境变量未设置")
     
     print(f"🚀 正在从 API 拉取节点...")
     
-    async with aiohttp.ClientSession() as session:
-        async with session.get(API_URL, timeout=aiohttp.ClientTimeout(total=120)) as resp:
-            if resp.status != 200:
-                raise Exception(f"API 请求失败: {resp.status}")
-            
-            nodes = await resp.json()
-            print(f"📦 获取到 {len(nodes)} 个原始节点")
-            return nodes
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+    }
+    
+    max_retries = 3
+    timeout_sec = 300  # 增加到 5 分钟
+    
+    for attempt in range(max_retries):
+        try:
+            timeout = aiohttp.ClientTimeout(total=timeout_sec, connect=60)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                print(f"   尝试 #{attempt+1}/{max_retries} (超时设定: {timeout_sec}s)...")
+                async with session.get(API_URL, headers=headers) as resp:
+                    if resp.status != 200:
+                        print(f"   ⚠️ API 返回错误: {resp.status}")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(5)
+                            continue
+                        raise Exception(f"API 请求失败: {resp.status}")
+                    
+                    try:
+                        nodes = await resp.json()
+                        print(f"📦 成功获取到 {len(nodes)} 个原始节点")
+                        return nodes
+                    except Exception as e:
+                        print(f"   ⚠️ 解析 JSON 失败: {e}")
+                        text = await resp.text()
+                        print(f"   返回内容预览: {text[:200]}...")
+                        raise e
+                        
+        except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+            print(f"   ⚠️ 请求失败: {str(e)}")
+            if attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 5
+                print(f"   ⏳ 等待 {wait_time} 秒后重试...")
+                await asyncio.sleep(wait_time)
+            else:
+                print("❌ 重试次数耗尽")
+                raise Exception(f"无法连接到节点 API (尝试 {max_retries} 次均失败)")
+    
+    return []
 
 
 def save_to_supabase(nodes: List[Dict]):
