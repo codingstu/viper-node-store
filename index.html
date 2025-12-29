@@ -658,7 +658,17 @@
             // 根据延迟和速度综合评估
             const latency = node.latency_ms || 0;
             const successRate = node.success_rate || 100;
-            const qualityScore = node.quality_score || 50;
+            const speed = node.speed || 0;
+            
+            // 如果有质量评分就用，否则根据速度估算
+            let qualityScore = node.quality_score;
+            if (qualityScore === undefined || qualityScore === null) {
+                // 根据速度估算质量 (没有测试数据时的回退方案)
+                if (speed >= 10) qualityScore = 80;
+                else if (speed >= 5) qualityScore = 60;
+                else if (speed >= 2) qualityScore = 40;
+                else qualityScore = 20;
+            }
             
             let speedColor = 'text-gray-500', barColor = 'bg-gray-700', glowClass = '', statusBadge = '';
             
@@ -679,7 +689,7 @@
             
             // 延迟显示
             const latencyText = latency > 0 ? `${Math.round(latency)}ms` : '--';
-            const latencyColor = latency < 300 ? 'text-emerald-400' : latency < 800 ? 'text-amber-400' : 'text-rose-400';
+            const latencyColor = latency > 0 ? (latency < 300 ? 'text-emerald-400' : latency < 800 ? 'text-amber-400' : 'text-rose-400') : 'text-gray-500';
             
             // 唯一ID用于测试按钮
             const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-');
@@ -736,67 +746,70 @@
             latencyEl.innerText = '测试中...';
             latencyEl.className = 'font-mono text-[10px] text-gray-400';
             
+            let tested = false;
+            
             try {
-                // 使用后端 API 进行测试 (浏览器无法直接 TCP ping)
-                const startTime = performance.now();
+                // 方案1: 尝试使用后端 API 进行 TCP ping
                 const response = await fetch(`${VIPER_API_BASE}/api/node/ping?host=${encodeURIComponent(host)}&port=${port}`, {
                     method: 'GET',
-                    signal: AbortSignal.timeout(8000)
+                    signal: AbortSignal.timeout(6000)
                 });
-                const endTime = performance.now();
                 
                 if (response.ok) {
                     const data = await response.json();
-                    const latency = data.latency_ms || Math.round(endTime - startTime);
-                    
-                    if (data.success) {
+                    if (data.success && data.latency_ms) {
+                        const latency = data.latency_ms;
                         latencyEl.innerText = `${latency}ms`;
-                        if (latency < 300) {
-                            latencyEl.className = 'font-mono text-[10px] text-emerald-400';
-                        } else if (latency < 800) {
-                            latencyEl.className = 'font-mono text-[10px] text-amber-400';
-                        } else {
-                            latencyEl.className = 'font-mono text-[10px] text-rose-400';
-                        }
+                        latencyEl.className = `font-mono text-[10px] ${latency < 300 ? 'text-emerald-400' : latency < 800 ? 'text-amber-400' : 'text-rose-400'}`;
                         showToast(`延迟: ${latency}ms`);
-                    } else {
+                        tested = true;
+                    } else if (data.success === false) {
                         latencyEl.innerText = '超时';
                         latencyEl.className = 'font-mono text-[10px] text-rose-400';
                         showToast('节点无响应');
+                        tested = true;
                     }
-                } else {
-                    // 后端 API 不可用时，回退到简单的 HTTP 检测
-                    await fallbackHttpTest(host, port, nodeId, latencyEl);
                 }
             } catch (e) {
-                // 尝试 HTTP 回退测试
-                await fallbackHttpTest(host, port, nodeId, latencyEl);
+                // 后端 API 不可用，尝试回退方案
+            }
+            
+            // 方案2: HTTP 回退测试 (估算)
+            if (!tested) {
+                try {
+                    const startTime = performance.now();
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    await fetch(`https://${host}:${port}/`, {
+                        method: 'HEAD',
+                        mode: 'no-cors',
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    const latency = Math.round(performance.now() - startTime);
+                    
+                    // no-cors 模式下可能返回 opaque response，但我们只测量时间
+                    latencyEl.innerText = `~${latency}ms`;
+                    latencyEl.className = 'font-mono text-[10px] text-cyan-400';
+                    showToast(`网络延迟: ~${latency}ms (估算)`);
+                    tested = true;
+                } catch (e) {
+                    // HTTP 测试也失败
+                }
+            }
+            
+            // 方案3: 如果都失败，显示提示
+            if (!tested) {
+                latencyEl.innerText = 'N/A';
+                latencyEl.className = 'font-mono text-[10px] text-gray-500';
+                showToast('浏览器无法直接测试，请在客户端验证');
             }
             
             // 恢复按钮
             btn.disabled = false;
             btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>';
-        }
-        
-        async function fallbackHttpTest(host, port, nodeId, latencyEl) {
-            // 浏览器环境下的简易测试: 尝试 HTTP/HTTPS 连接测量响应时间
-            // 注意: 这只能检测 HTTP 端口，不能真正测试代理协议
-            try {
-                const startTime = performance.now();
-                await fetch(`https://${host}:${port}/`, {
-                    method: 'HEAD',
-                    mode: 'no-cors',
-                    signal: AbortSignal.timeout(5000)
-                });
-                const latency = Math.round(performance.now() - startTime);
-                
-                latencyEl.innerText = `~${latency}ms`;
-                latencyEl.className = 'font-mono text-[10px] text-gray-400';
-                showToast(`估算延迟: ~${latency}ms`);
-            } catch {
-                latencyEl.innerText = '无法测试';
-                latencyEl.className = 'font-mono text-[10px] text-gray-500';
-            }
         }
         
         // 批量测试所有节点
@@ -816,13 +829,24 @@
         }
         
         // ================= 筛选与排序功能 =================
+        
+        // 统一的质量评分计算函数
+        function getNodeQualityScore(n) {
+            if (n.quality_score !== undefined && n.quality_score !== null) return n.quality_score;
+            const speed = n.speed || 0;
+            if (speed >= 10) return 80;
+            if (speed >= 5) return 60;
+            if (speed >= 2) return 40;
+            return 20;
+        }
+        
         function filterNodes(quality) {
             let filtered = [...globalNormalNodes];
             
             if (quality === 'high') {
-                filtered = filtered.filter(n => (n.quality_score || 50) >= 70);
+                filtered = filtered.filter(n => getNodeQualityScore(n) >= 70);
             } else if (quality === 'medium') {
-                filtered = filtered.filter(n => (n.quality_score || 50) >= 40);
+                filtered = filtered.filter(n => getNodeQualityScore(n) >= 40);
             }
             
             // 应用当前排序
@@ -839,9 +863,9 @@
             let filtered = [...globalNormalNodes];
             
             if (qualityFilter === 'high') {
-                filtered = filtered.filter(n => (n.quality_score || 50) >= 70);
+                filtered = filtered.filter(n => getNodeQualityScore(n) >= 70);
             } else if (qualityFilter === 'medium') {
-                filtered = filtered.filter(n => (n.quality_score || 50) >= 40);
+                filtered = filtered.filter(n => getNodeQualityScore(n) >= 40);
             }
             
             filtered = applySorting(filtered, sortBy);
@@ -865,7 +889,7 @@
                     break;
                 case 'quality':
                 default:
-                    sorted.sort((a, b) => (b.quality_score || 50) - (a.quality_score || 50));
+                    sorted.sort((a, b) => getNodeQualityScore(b) - getNodeQualityScore(a));
                     break;
             }
             
@@ -881,12 +905,28 @@
             const verifiedCount = data.filter(n => n.latency_ms && n.latency_ms > 0).length;
             const verifiedEl = document.getElementById('monitor-verified');
             if (verifiedEl) {
-                verifiedEl.innerText = verifiedCount > 0 ? `${verifiedCount}/${data.length}` : '--';
+                if (verifiedCount > 0) {
+                    verifiedEl.innerText = `${verifiedCount}/${data.length}`;
+                } else {
+                    // 没有服务端测试数据时，显示待测试
+                    verifiedEl.innerText = '待测试';
+                    verifiedEl.className = 'text-gray-400 font-mono';
+                }
             }
             
+            // 计算质量分数 (与 createNodeCard 逻辑一致)
+            const getQualityScore = (n) => {
+                if (n.quality_score !== undefined && n.quality_score !== null) return n.quality_score;
+                const speed = n.speed || 0;
+                if (speed >= 10) return 80;
+                if (speed >= 5) return 60;
+                if (speed >= 2) return 40;
+                return 20;
+            };
+            
             // 统计质量分布
-            const highQuality = data.filter(n => (n.quality_score || 50) >= 70).length;
-            const mediumQuality = data.filter(n => (n.quality_score || 50) >= 40 && (n.quality_score || 50) < 70).length;
+            const highQuality = data.filter(n => getQualityScore(n) >= 70).length;
+            const mediumQuality = data.filter(n => getQualityScore(n) >= 40 && getQualityScore(n) < 70).length;
             console.log(`[Stats] 节点质量: 优质${highQuality} 中等${mediumQuality} 一般${data.length - highQuality - mediumQuality}`);
         }
         function getFlagEmoji(code) {
