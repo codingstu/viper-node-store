@@ -359,9 +359,9 @@ async def main():
     if not raw_nodes:
         return
 
-        # 🔥 替换: 不再调用 test_all_nodes (本地/GitHub测速)
-        # 而是调用新的云端测速
-        valid_nodes = await test_nodes_via_cloudflare(raw_nodes)
+    # 🔥 替换: 不再调用 test_all_nodes (本地/GitHub测速)
+    # 而是调用新的云端测速
+    valid_nodes = await test_nodes_via_cloudflare(raw_nodes)
 
     if valid_nodes:
         save_to_supabase(valid_nodes)
