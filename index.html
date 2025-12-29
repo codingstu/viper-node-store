@@ -150,21 +150,26 @@
 
     <main class="max-w-7xl mx-auto px-4 pt-24">
         <div class="flex flex-wrap items-center justify-between mb-6 gap-3">
-            <div class="glass-card px-5 py-2 rounded-full flex items-center gap-4 text-xs text-gray-400 shadow-lg overflow-x-auto">
+            <div
+                class="glass-card px-5 py-2 rounded-full flex items-center gap-4 text-xs text-gray-400 shadow-lg overflow-x-auto">
                 <span class="flex items-center gap-2 whitespace-nowrap">
                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                     NODES: <strong class="text-white font-mono text-sm" id="node-count">--</strong>
                 </span>
-                
+
                 <span class="w-px h-3 bg-white/10"></span>
-                
-                <span class="whitespace-nowrap">STATUS: <strong class="text-emerald-400 font-mono" id="user-status-text">GUEST</strong></span>
-                
+
+                <span class="whitespace-nowrap">STATUS: <strong class="text-emerald-400 font-mono"
+                        id="user-status-text">GUEST</strong></span>
+
                 <span class="w-px h-3 bg-white/10 hidden md:block"></span>
-                
+
                 <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-cyan-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-cyan-400" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+                            clip-rule="evenodd" />
                     </svg>
                     NET I/O: <strong class="text-cyan-400 font-mono" id="monitor-io">0 KB/s</strong>
                 </span>
@@ -172,10 +177,23 @@
                 <span class="w-px h-3 bg-white/10 hidden md:block"></span>
 
                 <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-amber-400" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z"
+                            clip-rule="evenodd" />
                     </svg>
                     HITS: <strong class="text-amber-400 font-mono" id="monitor-hits">--</strong>
+                    <span class="w-px h-3 bg-white/10 hidden md:block"></span>
+
+                    <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
+                        <span class="relative flex h-2 w-2">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        ONLINE: <strong class="text-emerald-400 font-mono" id="monitor-online">1</strong>
+                    </span>
                 </span>
             </div>
         </div>
@@ -234,7 +252,7 @@
                         REGISTER
                     </button>
                 </div>
-                </div>
+            </div>
 
             <div id="user-section" class="hidden space-y-4">
                 <div class="bg-white/5 rounded-lg p-3 border border-white/5">
@@ -289,7 +307,7 @@
 
             <div class="overflow-y-auto pr-2 custom-scrollbar flex-1">
                 <div id="cn-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    </div>
+                </div>
             </div>
 
             <div class="mt-4 pt-4 border-t border-white/5 text-center">
@@ -361,7 +379,7 @@
         // ================= 配置区域 =================
         const SUPABASE_URL = 'https://hnlkwtkxbqiakeyienok.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME';
-        
+
         // 后端 API 地址 (通过 Cloudflare Tunnel)
         const VIPER_API_BASE = 'https://api.996828.xyz';
 
@@ -387,7 +405,7 @@
             try {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) return { user: null, isVip: false };
-                
+
                 // 🔥 [修复点] 将 .single() 改为 .maybeSingle()
                 // 解释：新用户(QuickStart)在profiles表里可能还没数据。
                 // .single() 没找到会报 406 错误，.maybeSingle() 没找到会返回 null (视为普通用户)，不会报错。
@@ -395,7 +413,7 @@
                     .from('profiles')
                     .select('vip_until')
                     .eq('id', user.id)
-                    .maybeSingle(); 
+                    .maybeSingle();
 
                 const isVip = data?.vip_until && new Date(data.vip_until) > new Date();
                 return { user, isVip, vipDate: data?.vip_until };
@@ -428,7 +446,7 @@
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/nodes?select=content&order=is_free.desc`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
-                
+
                 if (!response.ok) throw new Error('Data Fetch Failed');
                 const rawData = await response.json();
                 let nodes = rawData ? rawData.map(item => item.content) : [];
@@ -471,23 +489,23 @@
         async function updateMonitorStats() {
             try {
                 // 🔥 [修复点 1] 路由改回 /api/system/stats (匹配现在的后端)
-                const sysRes = await fetch(`${VIPER_API_BASE}/api/system/stats`); 
-                if(sysRes.ok) {
+                const sysRes = await fetch(`${VIPER_API_BASE}/api/system/stats`);
+                if (sysRes.ok) {
                     const sysData = await sysRes.json();
-                    if(sysData.network) {
+                    if (sysData.network) {
                         const currentTotal = (sysData.network.bytes_sent || 0) + (sysData.network.bytes_recv || 0);
                         const now = Date.now();
-                        
+
                         // 计算速度 (Throughput)
                         if (lastBytesTotal > 0 && lastCheckTime > 0) {
                             const deltaBytes = currentTotal - lastBytesTotal;
                             const deltaTime = (now - lastCheckTime) / 1000;
-                            if(deltaTime > 0) {
+                            if (deltaTime > 0) {
                                 const speedBps = deltaBytes / deltaTime;
                                 document.getElementById('monitor-io').innerText = formatSpeed(speedBps);
                             }
                         }
-                        
+
                         lastBytesTotal = currentTotal;
                         lastCheckTime = now;
                     }
@@ -495,11 +513,15 @@
 
                 // 🔥 [修复点 2] 路由改回 /api/visitors/stats (复数 visitors)
                 const visitRes = await fetch(`${VIPER_API_BASE}/api/visitors/stats`);
-                if(visitRes.ok) {
+                if (visitRes.ok) {
                     const visitData = await visitRes.json();
-                    if(visitData.total_visitors !== undefined) {
+                    if (visitData.total_visitors !== undefined) {
                         document.getElementById('monitor-hits').innerText = visitData.total_visitors.toLocaleString();
                     }
+                }
+                // 🔥 更新当前在线人数
+                if (visitData.online_count !== undefined) {
+                    document.getElementById('monitor-online').innerText = visitData.online_count;
                 }
 
             } catch (e) {
@@ -509,8 +531,8 @@
         }
 
         function formatSpeed(bytesPerSec) {
-            if(bytesPerSec < 1024) return bytesPerSec.toFixed(0) + " B/s";
-            if(bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + " KB/s";
+            if (bytesPerSec < 1024) return bytesPerSec.toFixed(0) + " B/s";
+            if (bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + " KB/s";
             return (bytesPerSec / (1024 * 1024)).toFixed(2) + " MB/s";
         }
 
@@ -712,7 +734,7 @@
         async function handleQuickStart() {
             const btn = document.getElementById('ghost-quick-btn');
             let originalText = '';
-            if(btn) {
+            if (btn) {
                 originalText = btn.innerHTML;
                 btn.innerHTML = '<span class="animate-spin">↻</span> 系统接入中...';
                 btn.disabled = true;
@@ -750,14 +772,14 @@
                 // UI 反馈
                 showIdentityCard(username, password);
                 document.getElementById('auth-modal').classList.add('hidden');
-                
+
                 // 刷新数据以应用登录状态
                 fetchData();
 
             } catch (err) {
                 console.error(err);
                 alert('接入中断: ' + err.message);
-                if(btn) {
+                if (btn) {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
@@ -769,7 +791,7 @@
             document.getElementById('new-username').innerText = user;
             document.getElementById('new-password').innerText = pass;
             window.currentIdentity = { user, pass };
-            
+
             const modal = document.getElementById('identity-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -832,4 +854,5 @@
 
     </script>
 </body>
+
 </html>
