@@ -470,8 +470,8 @@
 
         async function updateMonitorStats() {
             try {
-                // 1. 获取系统监控 (Network I/O)
-                const sysRes = await fetch(`${VIPER_API_BASE}/api/system/monitor`); 
+                // 🔥 [修复点 1] 路由改回 /api/system/stats (匹配现在的后端)
+                const sysRes = await fetch(`${VIPER_API_BASE}/api/system/stats`); 
                 if(sysRes.ok) {
                     const sysData = await sysRes.json();
                     if(sysData.network) {
@@ -493,8 +493,8 @@
                     }
                 }
 
-                // 2. 获取 API 热度 (Visitor Count)
-                const visitRes = await fetch(`${VIPER_API_BASE}/api/visitor/stats`);
+                // 🔥 [修复点 2] 路由改回 /api/visitors/stats (复数 visitors)
+                const visitRes = await fetch(`${VIPER_API_BASE}/api/visitors/stats`);
                 if(visitRes.ok) {
                     const visitData = await visitRes.json();
                     if(visitData.total_visitors !== undefined) {
