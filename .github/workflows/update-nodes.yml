@@ -1,0 +1,56 @@
+name: Update & Test Nodes
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'update_nodes.py'
+      - '.github/workflows/update-nodes.yml'
+
+jobs:
+  update-nodes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install aiohttp supabase requests aiodns
+          pip list
+      
+      - name: Run node testing script
+        env:
+          SHADOW_VIPER_API: ${{ secrets.SHADOW_VIPER_API }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "🚀 Starting node testing..."
+          python update_nodes.py
+          echo "✅ Node testing completed!"
+      
+      - name: Commit updated nodes.json (if changed)
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if git diff --quiet public/nodes.json; then
+            echo "No changes to nodes.json"
+          else
+            git add public/nodes.json
+            git commit -m "chore: auto-update nodes.json with latest test results"
+            git push
+            echo "✅ nodes.json updated and pushed"
+          fi
