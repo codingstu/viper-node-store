@@ -13,6 +13,7 @@ import json
 import time
 from datetime import datetime
 from typing import List, Dict
+from email.utils import formatdate
 
 # =================== 配置区域 ===================
 
@@ -98,10 +99,17 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
             try:
                 print(f"   📤 发送批次 {i // batch_size + 1} ({len(batch)} 个节点)...")
 
+                # 构造请求头（阿里云要求包含 Date 头）
+                request_headers = {
+                    "x-secret": ALIYUN_SECRET,
+                    "Content-Type": "application/json",
+                    "Date": formatdate(timeval=None, localtime=False, usegmt=True)
+                }
+
                 async with session.post(
                         ALIYUN_FC_URL,
                         json=payload,
-                        headers={"x-secret": ALIYUN_SECRET, "Content-Type": "application/json"},
+                        headers=request_headers,
                         timeout=20  # 给阿里云足够的运行时间
                 ) as resp:
                     if resp.status == 200:
