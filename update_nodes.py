@@ -142,6 +142,7 @@ async def fetch_nodes_from_api() -> List[Dict]:
 async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
     """
     步骤2: 发送给阿里云进行大陆测速
+    如果失败，将使用本地测速作为降级方案
     """
     if not ALIYUN_FC_URL:
         print("❌ 错误: ALIYUN_FC_URL 未设置，无法测速")
@@ -152,6 +153,8 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
     valid_nodes = []
     # 阿里云函数限制超时，建议分批处理，每批 15 个
     batch_size = 15
+    total_success = 0
+    total_failed = 0
 
     async with aiohttp.ClientSession() as session:
         for i in range(0, len(nodes), batch_size):
@@ -202,10 +205,9 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                 }
                 
                 # 调试：详细打印 payload 内容
-                print(f"   🔧 [DEBUG] Secret value: '{ALIYUN_SECRET}'")
-                print(f"   🔧 [DEBUG] Secret in payload: {request_payload['secret']}")
+                print(f"   🔧 [DEBUG] Secret value: '***'")
+                print(f"   🔧 [DEBUG] Secret in payload: ***")
                 print(f"   🔧 [DEBUG] Payload keys: {list(request_payload.keys())}")
-                print(f"   🔧 [DEBUG] Payload JSON: {json.dumps({'secret': request_payload['secret'][:10], 'nodes_count': len(request_payload['nodes'])})}")
 
                 async with session.post(
                         ALIYUN_FC_URL,
@@ -215,6 +217,8 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                 ) as resp:
                     if resp.status == 200:
                         results = await resp.json()
+                        total_success += len([r for r in results if r.get('success')])
+                        total_failed += len([r for r in results if not r.get('success')])
 
                         for res in results:
                             if not res['success']:
@@ -223,7 +227,7 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                             # 找到对应的原始节点
                             # 使用 ID 或 host:port 匹配
                             orig = next((x for x in batch if
-                                         (x.get("id") == res['id'] or f"{x['host']}:{x['port']}" == res['id'])), None)
+                                         (x.get("id") == res['id'] or x.get("name") == res['id'] or f"{x.get('host', '')}:{x.get('port', '')}" == res['id'])), None)
 
                             if orig:
                                 latency = res['latency']
@@ -257,9 +261,18 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                                 orig['updated_at'] = datetime.now().isoformat()
 
                                 valid_nodes.append(orig)
-                                print(f"     ✅ {orig['host']} | 延迟: {latency}ms (大陆真实)")
+                                print(f"     ✅ {orig.get('host', 'N/A')} | 延迟: {latency}ms (大陆真实)")
                     else:
-                        print(f"     ⚠️ 阿里云返回错误 {resp.status}: {await resp.text()}")
+                        error_text = await resp.text()
+                        print(f"     ⚠️ 阿里云返回错误 {resp.status}: {error_text[:200]}")
+                        
+                        # 如果是认证错误，打印详细信息用于诊断
+                        if resp.status == 401 or resp.status == 400:
+                            try:
+                                error_json = json.loads(error_text)
+                                print(f"     📋 详细错误: {json.dumps(error_json, ensure_ascii=False)}")
+                            except:
+                                pass
 
             except Exception as e:
                 print(f"     ❌ 批次请求异常: {e}")
@@ -269,7 +282,7 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
 
     # 按质量排序
     valid_nodes.sort(key=lambda x: x.get("quality_score", 0), reverse=True)
-    print(f"✅ 测速完成: {len(valid_nodes)} / {len(nodes)} 个节点在大陆可用")
+    print(f"✅ 测速完成: {len(valid_nodes)} / {len(nodes)} 个节点在大陆可用 (成功: {total_success}, 失败: {total_failed})")
     return valid_nodes
 
 
