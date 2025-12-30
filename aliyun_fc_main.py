@@ -5,38 +5,38 @@ import json
 
 app = Flask(__name__)
 
-# 校验暗号，保持与 GitHub Secret 一致
-SECRET = "viper-aliyun-2025"
-
 @app.route('/', methods=['POST'])
 def probe():
-    # 1. 鉴权 - 从 POST body 中读取密钥
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Empty request body", "received_data": None}), 400
-    
-    client_secret = data.get('secret')
-    
-    # 调试：返回收到的 secret 信息
-    if client_secret != SECRET:
-        return jsonify({
-            "error": "Unauthorized", 
-            "expected_secret_type": type(SECRET).__name__,
-            "received_secret_type": type(client_secret).__name__,
-            "received_secret_length": len(client_secret) if client_secret else 0,
-            "received_secret_first_10": client_secret[:10] if client_secret else None,
-            "data_keys": list(data.keys())
-        }), 401
-
-    # 2. 获取节点列表
+    """
+    阿里云函数：大陆节点测速
+    输入: {"nodes": [{"id": "...", "host": "...", "port": 443}, ...]}
+    输出: [{"id": "...", "latency": 100, "success": true}, ...]
+    """
     try:
+        # 直接从 POST body 获取节点列表
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Empty request body"}), 400
+        
         nodes = data.get('nodes', [])
+        if not nodes:
+            return jsonify({"error": "No nodes to test"}), 400
+        
         results = []
 
         for node in nodes:
             host = node.get('host')
-            port = int(node.get('port'))
+            port = node.get('port')
             node_id = node.get('id')
+            
+            if not host or not port:
+                results.append({
+                    "id": node_id,
+                    "latency": -1,
+                    "success": False,
+                    "error": "Missing host or port"
+                })
+                continue
 
             start = time.perf_counter()
             success = False
@@ -44,10 +44,10 @@ def probe():
                 # 真实 TCP 握手测试
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.settimeout(2.5)
-                res = s.connect_ex((host, port))
+                res = s.connect_ex((host, int(port)))
                 success = (res == 0)
                 s.close()
-            except:
+            except Exception as e:
                 success = False
 
             latency = int((time.perf_counter() - start) * 1000) if success else -1
@@ -59,7 +59,7 @@ def probe():
 
         return jsonify(results)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "error_type": type(e).__name__}), 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=9000)

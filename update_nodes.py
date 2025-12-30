@@ -189,25 +189,19 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                 print(f"⚠️ 批次 {i // batch_size + 1} 没有有效节点")
                 continue
 
-            # 完整的请求体：包含 secret 和 nodes
+            # 完整的请求体：只包含 nodes（移除认证）
             request_payload = {
-                "secret": ALIYUN_SECRET,
                 "nodes": payload_nodes
             }
 
             try:
-                print(f"   📤 发送批次 {i // batch_size + 1} ({len(batch)} 个节点)...")
+                print(f"   📤 发送批次 {i // batch_size + 1} ({len(payload_nodes)} 个节点)...")
 
-                # 构造请求头（阿里云要求包含 Date 头）
+                # 构造请求头
                 request_headers = {
                     "Content-Type": "application/json",
                     "Date": formatdate(timeval=None, localtime=False, usegmt=True)
                 }
-                
-                # 调试：详细打印 payload 内容
-                print(f"   🔧 [DEBUG] Secret value: '***'")
-                print(f"   🔧 [DEBUG] Secret in payload: ***")
-                print(f"   🔧 [DEBUG] Payload keys: {list(request_payload.keys())}")
 
                 async with session.post(
                         ALIYUN_FC_URL,
