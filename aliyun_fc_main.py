@@ -10,14 +10,18 @@ SECRET = "viper-aliyun-2025"
 
 @app.route('/', methods=['POST'])
 def probe():
-    # 1. 鉴权 - 优先检查 URL 参数，其次检查请求头
-    client_secret = request.args.get('secret') or request.headers.get('x-secret')
+    # 1. 鉴权 - 从 POST body 中读取密钥
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Empty request body"}), 400
+    
+    client_secret = data.get('secret')
     if client_secret != SECRET:
         return jsonify({"error": "Unauthorized", "received": client_secret}), 401
 
     # 2. 获取节点列表
     try:
-        nodes = request.get_json()
+        nodes = data.get('nodes', [])
         results = []
 
         for node in nodes:

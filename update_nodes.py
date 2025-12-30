@@ -97,23 +97,26 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
         for i in range(0, len(nodes), batch_size):
             batch = nodes[i:i + batch_size]
 
-            # 构造 Payload
-            payload = []
+            # 构造 Payload（包含密钥和节点列表）
+            payload_nodes = []
             for n in batch:
                 # 确保 id 存在
                 n_id = n.get("id") or f"{n['host']}:{n['port']}"
-                payload.append({
+                payload_nodes.append({
                     "id": n_id,
                     "host": n['host'],
                     "port": int(n['port'])
                 })
 
+            # 完整的请求体：包含 secret 和 nodes
+            request_payload = {
+                "secret": ALIYUN_SECRET,
+                "nodes": payload_nodes
+            }
+
             try:
                 print(f"   📤 发送批次 {i // batch_size + 1} ({len(batch)} 个节点)...")
 
-                # 在 URL 中添加密钥参数（更可靠的方式）
-                request_url = f"{ALIYUN_FC_URL}?secret={ALIYUN_SECRET}"
-                
                 # 构造请求头（阿里云要求包含 Date 头）
                 request_headers = {
                     "Content-Type": "application/json",
@@ -121,11 +124,11 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                 }
                 
                 # 调试：检查请求信息
-                print(f"   🔧 [DEBUG] URL contains secret: {'secret=' in request_url}")
+                print(f"   🔧 [DEBUG] Sending secret in POST body")
 
                 async with session.post(
-                        request_url,
-                        json=payload,
+                        ALIYUN_FC_URL,
+                        json=request_payload,
                         headers=request_headers,
                         timeout=20  # 给阿里云足够的运行时间
                 ) as resp:
