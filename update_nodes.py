@@ -43,7 +43,7 @@ def extract_host_port(link: str) -> tuple:
     支持: vless://, vmess://, trojan://, ss:// 等
     """
     try:
-        # 解析 URL
+        # 首先尝试标准 URL 解析
         parsed = urlparse(link)
         host = parsed.hostname
         port = parsed.port
@@ -51,18 +51,34 @@ def extract_host_port(link: str) -> tuple:
         if host and port:
             return host, port
         
-        # 备选：从 netloc 手动解析
+        # 备选：从 netloc 手动解析（处理非标准格式）
         netloc = parsed.netloc
         if '@' in netloc:
             netloc = netloc.split('@')[1]
         
         if ':' in netloc:
             parts = netloc.rsplit(':', 1)
-            return parts[0], int(parts[1])
+            try:
+                return parts[0], int(parts[1])
+            except:
+                pass
+        
+        # 如果是 VMess，尝试从 base64 解析
+        if link.startswith('vmess://'):
+            try:
+                import base64
+                encoded = link.replace('vmess://', '')
+                decoded = base64.b64decode(encoded).decode('utf-8')
+                vmess_json = json.loads(decoded)
+                host = vmess_json.get('add')
+                port = vmess_json.get('port')
+                if host and port:
+                    return host, int(port)
+            except:
+                pass
         
         return None, None
     except Exception as e:
-        print(f"🔧 [DEBUG] 解析链接失败: {e}")
         return None, None
 
 async def fetch_nodes_from_api() -> List[Dict]:
@@ -185,8 +201,8 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                     "Date": formatdate(timeval=None, localtime=False, usegmt=True)
                 }
                 
-                # 调试：检查请求信息
-                print(f"   🔧 [DEBUG] Sending secret in POST body")
+                # 调试：检查 secret 是否在 payload 中
+                print(f"   🔧 [DEBUG] Secret in payload: {'secret' in request_payload and len(request_payload['secret']) > 0}")
 
                 async with session.post(
                         ALIYUN_FC_URL,
