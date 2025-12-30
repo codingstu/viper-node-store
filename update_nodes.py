@@ -45,7 +45,8 @@ async def fetch_nodes_from_api() -> List[Dict]:
         "Accept": "application/json"
     }
 
-    timeout = aiohttp.ClientTimeout(total=30)
+    # 增加超时时间以应对 GitHub Actions 网络环境
+    timeout = aiohttp.ClientTimeout(total=60, connect=30, sock_read=30)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         try:
             async with session.get(API_URL, headers=headers) as resp:
@@ -60,7 +61,8 @@ async def fetch_nodes_from_api() -> List[Dict]:
                     return []
         except Exception as e:
             print(f"   ❌ 网络异常: {type(e).__name__}: {str(e) if str(e) else '未知错误'}")
-            print(f"   🔍 调试信息: API_URL={API_URL[:50]}...")
+            print(f"   🔍 调试信息: API_URL={API_URL[:60]}...")
+            print(f"   💡 建议: 检查 API 是否使用 HTTPS，或增加超时时间")
             return []
 
 
