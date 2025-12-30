@@ -38,6 +38,8 @@ jobs:
           SHADOW_VIPER_API: ${{ secrets.SHADOW_VIPER_API }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          ALIYUN_FC_URL: ${{ secrets.ALIYUN_FC_URL }}
+          ALIYUN_SECRET: ${{ secrets.ALIYUN_SECRET }}
         run: python update_nodes.py
       
       - name: Commit updated nodes.json
