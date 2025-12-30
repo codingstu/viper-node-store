@@ -28,6 +28,10 @@ ALIYUN_FC_URL = os.environ.get("ALIYUN_FC_URL", "")
 # 必须与阿里云 main.py 里的密码一致
 ALIYUN_SECRET = os.environ.get("ALIYUN_SECRET", "viper-aliyun-2025")
 
+# 调试：检查环境变量是否正确设置
+print(f"🔧 [DEBUG] ALIYUN_FC_URL: {ALIYUN_FC_URL[:50] if ALIYUN_FC_URL else 'NOT SET'}...")
+print(f"🔧 [DEBUG] ALIYUN_SECRET: {'SET' if ALIYUN_SECRET else 'NOT SET'} (value: {ALIYUN_SECRET[:10] if ALIYUN_SECRET else 'empty'}...)")
+
 
 # =================== 核心逻辑 ===================
 
