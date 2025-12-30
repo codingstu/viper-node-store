@@ -24,15 +24,15 @@ API_URL = os.environ.get("SHADOW_VIPER_API", "")  # 你的后端 API 地址
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")  # Supabase URL
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")  # Supabase Key
 
-# 阿里云函数计算配置
-# 格式如: https://mainland-probe.xxx.cn-hangzhou.fc.aliyuncs.com
+# 大陆测速：阿里云函数计算
 ALIYUN_FC_URL = os.environ.get("ALIYUN_FC_URL", "")
-# 必须与阿里云 main.py 里的密码一致
-ALIYUN_SECRET = os.environ.get("ALIYUN_SECRET", "viper-aliyun-2025")
+
+# 回国节点测速：Cloudflare Workers
+CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL", "")
 
 # 调试：检查环境变量是否正确设置
 print(f"🔧 [DEBUG] ALIYUN_FC_URL: {ALIYUN_FC_URL[:50] if ALIYUN_FC_URL else 'NOT SET'}...")
-print(f"🔧 [DEBUG] ALIYUN_SECRET: {'SET' if ALIYUN_SECRET else 'NOT SET'} (value: {ALIYUN_SECRET[:10] if ALIYUN_SECRET else 'empty'}...)")
+print(f"🔧 [DEBUG] CLOUDFLARE_WORKER_URL: {CLOUDFLARE_WORKER_URL[:50] if CLOUDFLARE_WORKER_URL else 'NOT SET'}...")
 
 
 # =================== 核心逻辑 ===================
@@ -81,16 +81,17 @@ def extract_host_port(link: str) -> tuple:
     except Exception as e:
         return None, None
 
-async def fetch_nodes_from_api() -> List[Dict]:
+async def fetch_nodes_from_api(region: str = 'mainland') -> List[Dict]:
     """
-    步骤1: 获取原始节点 (优先本地文件，再尝试远程 API)
+    步骤1: 获取节点 (从 SpiderFlow 后端的 API)
+    region: 'mainland' (大陆) 或 'overseas' (海外)
     """
     # 优先尝试从本地 JSON 文件读取
     try:
         with open('public/nodes.json', 'r', encoding='utf-8') as f:
             local_nodes = json.load(f)
             if isinstance(local_nodes, list) and len(local_nodes) > 0:
-                print("✅ [1/3] 从本地文件加载节点")
+                print(f"✅ [1/3] 从本地文件加载节点 (地区: {region})")
                 print(f"   📦 加载成功: {len(local_nodes)} 个节点")
                 return local_nodes
     except FileNotFoundError:
@@ -103,15 +104,14 @@ async def fetch_nodes_from_api() -> List[Dict]:
         print("❌ 错误: SHADOW_VIPER_API 环境变量未设置")
         return []
 
-    print(f"🚀 [1/3] 从远程 API 获取节点: {API_URL}")
+    print(f"🚀 [1/3] 从远程 API 获取节点: {API_URL} (地区: {region})")
 
     headers = {
-        "User-Agent": "ShadowNexus/Aliyun-Probe",
+        "User-Agent": "ShadowNexus/Probe",
         "Accept": "application/json"
     }
 
-    # 增加超时时间以应对 GitHub Actions 网络环境和跨国延迟
-    # 总超时 180 秒，连接 60 秒，读取 120 秒
+    # 增加超时时间
     timeout = aiohttp.ClientTimeout(total=180, connect=60, sock_read=120)
     
     max_retries = 3
@@ -135,7 +135,6 @@ async def fetch_nodes_from_api() -> List[Dict]:
                 await asyncio.sleep(5)
             else:
                 print(f"   🔍 调试信息: API_URL={API_URL[:60]}...")
-                print(f"   💡 建议: 检查 API 服务器是否在线，或增加超时时间")
                 return []
 
 
@@ -280,6 +279,125 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
     return valid_nodes
 
 
+async def test_nodes_via_cloudflare(nodes: List[Dict]) -> List[Dict]:
+    """
+    步骤2B: 发送给 Cloudflare Workers 进行国外测速 (回国节点)
+    """
+    if not CLOUDFLARE_WORKER_URL:
+        print("⚠️ 警告: CLOUDFLARE_WORKER_URL 未设置，跳过国外测速")
+        return []
+
+    print(f"\n🚀 [2B/3] 启动国外测速 (Cloudflare Workers)...")
+
+    valid_nodes = []
+    batch_size = 15
+    total_success = 0
+    total_failed = 0
+
+    async with aiohttp.ClientSession() as session:
+        for i in range(0, len(nodes), batch_size):
+            batch = nodes[i:i + batch_size]
+
+            # 构造 Payload
+            payload_nodes = []
+            for n in batch:
+                host = n.get('host')
+                port = n.get('port')
+                
+                if not host or not port:
+                    link = n.get('link', '')
+                    host, port = extract_host_port(link)
+                
+                if not host or not port:
+                    continue
+                
+                n_id = n.get("id") or n.get("name") or f"{host}:{port}"
+                payload_nodes.append({
+                    "id": n_id,
+                    "host": host,
+                    "port": int(port)
+                })
+            
+            if not payload_nodes:
+                continue
+
+            request_payload = {
+                "nodes": payload_nodes
+            }
+
+            try:
+                print(f"   📤 发送批次 {i // batch_size + 1} ({len(payload_nodes)} 个节点)...")
+
+                request_headers = {
+                    "Content-Type": "application/json",
+                    "Date": formatdate(timeval=None, localtime=False, usegmt=True)
+                }
+
+                async with session.post(
+                        CLOUDFLARE_WORKER_URL,
+                        json=request_payload,
+                        headers=request_headers,
+                        timeout=20
+                ) as resp:
+                    if resp.status == 200:
+                        results = await resp.json()
+                        total_success += len([r for r in results if r.get('success')])
+                        total_failed += len([r for r in results if not r.get('success')])
+
+                        for res in results:
+                            if not res['success']:
+                                continue
+
+                            orig = next((x for x in batch if
+                                         (x.get("id") == res['id'] or x.get("name") == res['id'] or f"{x.get('host', '')}:{x.get('port', '')}" == res['id'])), None)
+
+                            if orig:
+                                latency = res['latency']
+
+                                # === 国外优化的评分逻辑 ===
+                                # 国外测速延迟会更高，标准放更宽
+                                speed_score = 0
+                                quality_score = 0
+
+                                if latency < 100:  # 极速 (距离近/专线)
+                                    speed_score = 50
+                                    quality_score = 95
+                                elif latency < 150:  # 优秀
+                                    speed_score = 30
+                                    quality_score = 85
+                                elif latency < 250:  # 正常
+                                    speed_score = 10
+                                    quality_score = 70
+                                elif latency < 400:  # 一般
+                                    speed_score = 3
+                                    quality_score = 50
+                                else:  # 较差
+                                    speed_score = 1
+                                    quality_score = 30
+
+                                orig['latency_ms'] = latency
+                                orig['speed'] = speed_score
+                                orig['quality_score'] = quality_score
+                                orig['success_rate'] = 100
+                                orig['updated_at'] = datetime.now().isoformat()
+                                orig['test_via'] = 'cloudflare'  # 标记测试来源
+
+                                valid_nodes.append(orig)
+                                print(f"     ✅ {orig.get('host', 'N/A')} | 延迟: {latency}ms (国外真实)")
+                    else:
+                        error_text = await resp.text()
+                        print(f"     ⚠️ Cloudflare 返回错误 {resp.status}: {error_text[:200]}")
+
+            except Exception as e:
+                print(f"     ❌ 批次请求异常: {type(e).__name__}: {str(e)}")
+
+            await asyncio.sleep(0.5)
+
+    valid_nodes.sort(key=lambda x: x.get("quality_score", 0), reverse=True)
+    print(f"✅ 国外测速完成: {len(valid_nodes)} / {len(nodes)} 个节点在国外可用 (成功: {total_success}, 失败: {total_failed})")
+    return valid_nodes
+
+
 def save_to_supabase(nodes: List[Dict]):
     """
     步骤3: 保存结果 (含整数修复和去重)
@@ -339,16 +457,60 @@ def save_to_supabase(nodes: List[Dict]):
 
 
 async def main():
-    # 1. 获取
+    # 1. 获取原始节点
     raw_nodes = await fetch_nodes_from_api()
-    if not raw_nodes: return
+    if not raw_nodes:
+        print("❌ 无法获取节点")
+        return
 
-    # 2. 测速
-    valid_nodes = await test_nodes_via_aliyun(raw_nodes)
-
-    # 3. 保存
-    if valid_nodes:
-        save_to_supabase(valid_nodes)
+    print(f"\n📊 节点分类统计:")
+    print(f"   总节点数: {len(raw_nodes)}")
+    
+    # 2A. 分类处理节点
+    # 优先级: 
+    # - 如果 country 字段存在，使用它
+    # - 如果没有，尝试从其他字段推断
+    
+    cn_nodes = []
+    overseas_nodes = []
+    
+    for node in raw_nodes:
+        country = node.get('country', '').upper()
+        
+        # 大陆节点
+        if country == 'CN':
+            cn_nodes.append(node)
+        # 香港/台湾/澳门 -> 归类为国外（需要国外测速）
+        elif country in ['HK', 'TW', 'MO']:
+            overseas_nodes.append(node)
+        # 其他国外节点
+        elif country and country != 'CN':
+            overseas_nodes.append(node)
+        # 没有国家标签，默认归为国外
+        else:
+            overseas_nodes.append(node)
+    
+    print(f"   🇨🇳 大陆节点: {len(cn_nodes)}")
+    print(f"   🌍 国外节点: {len(overseas_nodes)}")
+    
+    all_valid_nodes = []
+    
+    # 2B. 大陆节点：使用阿里云测速
+    if cn_nodes:
+        aliyun_results = await test_nodes_via_aliyun(cn_nodes)
+        all_valid_nodes.extend(aliyun_results)
+    
+    # 2C. 国外节点：使用 Cloudflare Workers 测速
+    if overseas_nodes:
+        cf_results = await test_nodes_via_cloudflare(overseas_nodes)
+        all_valid_nodes.extend(cf_results)
+    
+    # 3. 保存所有结果
+    if all_valid_nodes:
+        print(f"\n📦 共有 {len(all_valid_nodes)} 个节点通过测速，即将保存...")
+        save_to_supabase(all_valid_nodes)
+    else:
+        print("⚠️ 没有节点通过测速")
 
 
 if __name__ == "__main__":
