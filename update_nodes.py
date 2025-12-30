@@ -37,22 +37,36 @@ print(f"🔧 [DEBUG] ALIYUN_SECRET: {'SET' if ALIYUN_SECRET else 'NOT SET'} (val
 
 async def fetch_nodes_from_api() -> List[Dict]:
     """
-    步骤1: 获取原始节点 (带重试机制)
+    步骤1: 获取原始节点 (优先本地文件，再尝试远程 API)
     """
+    # 优先尝试从本地 JSON 文件读取
+    try:
+        with open('public/nodes.json', 'r', encoding='utf-8') as f:
+            local_nodes = json.load(f)
+            if isinstance(local_nodes, list) and len(local_nodes) > 0:
+                print("✅ [1/3] 从本地文件加载节点")
+                print(f"   📦 加载成功: {len(local_nodes)} 个节点")
+                return local_nodes
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(f"⚠️ 本地文件读取失败: {e}")
+    
+    # 本地文件不存在或为空，尝试从 API 获取
     if not API_URL:
         print("❌ 错误: SHADOW_VIPER_API 环境变量未设置")
         return []
 
-    print(f"🚀 [1/3] 从 API 获取节点: {API_URL}")
+    print(f"🚀 [1/3] 从远程 API 获取节点: {API_URL}")
 
     headers = {
         "User-Agent": "ShadowNexus/Aliyun-Probe",
         "Accept": "application/json"
     }
 
-    # 增加超时时间以应对 GitHub Actions 网络环境
-    # 总超时 120 秒，连接 30 秒，读取 60 秒
-    timeout = aiohttp.ClientTimeout(total=120, connect=30, sock_read=60)
+    # 增加超时时间以应对 GitHub Actions 网络环境和跨国延迟
+    # 总超时 180 秒，连接 60 秒，读取 120 秒
+    timeout = aiohttp.ClientTimeout(total=180, connect=60, sock_read=120)
     
     max_retries = 3
     for attempt in range(max_retries):
