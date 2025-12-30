@@ -111,18 +111,20 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
             try:
                 print(f"   📤 发送批次 {i // batch_size + 1} ({len(batch)} 个节点)...")
 
+                # 在 URL 中添加密钥参数（更可靠的方式）
+                request_url = f"{ALIYUN_FC_URL}?secret={ALIYUN_SECRET}"
+                
                 # 构造请求头（阿里云要求包含 Date 头）
                 request_headers = {
-                    "x-secret": ALIYUN_SECRET,
                     "Content-Type": "application/json",
                     "Date": formatdate(timeval=None, localtime=False, usegmt=True)
                 }
                 
-                # 调试：检查请求头
-                print(f"   🔧 [DEBUG] x-secret length: {len(ALIYUN_SECRET)}, value: {ALIYUN_SECRET[:20] if ALIYUN_SECRET else 'EMPTY'}")
+                # 调试：检查请求信息
+                print(f"   🔧 [DEBUG] URL contains secret: {'secret=' in request_url}")
 
                 async with session.post(
-                        ALIYUN_FC_URL,
+                        request_url,
                         json=payload,
                         headers=request_headers,
                         timeout=20  # 给阿里云足够的运行时间
