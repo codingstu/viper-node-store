@@ -117,6 +117,9 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                     "Content-Type": "application/json",
                     "Date": formatdate(timeval=None, localtime=False, usegmt=True)
                 }
+                
+                # 调试：检查请求头
+                print(f"   🔧 [DEBUG] x-secret length: {len(ALIYUN_SECRET)}, value: {ALIYUN_SECRET[:20] if ALIYUN_SECRET else 'EMPTY'}")
 
                 async with session.post(
                         ALIYUN_FC_URL,
