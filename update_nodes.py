@@ -59,7 +59,8 @@ async def fetch_nodes_from_api() -> List[Dict]:
                     print(f"   ❌ 获取失败: {text[:100]}")
                     return []
         except Exception as e:
-            print(f"   ❌ 网络异常: {e}")
+            print(f"   ❌ 网络异常: {type(e).__name__}: {str(e) if str(e) else '未知错误'}")
+            print(f"   🔍 调试信息: API_URL={API_URL[:50]}...")
             return []
 
 
