@@ -201,8 +201,11 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                     "Date": formatdate(timeval=None, localtime=False, usegmt=True)
                 }
                 
-                # 调试：检查 secret 是否在 payload 中
-                print(f"   🔧 [DEBUG] Secret in payload: {'secret' in request_payload and len(request_payload['secret']) > 0}")
+                # 调试：详细打印 payload 内容
+                print(f"   🔧 [DEBUG] Secret value: '{ALIYUN_SECRET}'")
+                print(f"   🔧 [DEBUG] Secret in payload: {request_payload['secret']}")
+                print(f"   🔧 [DEBUG] Payload keys: {list(request_payload.keys())}")
+                print(f"   🔧 [DEBUG] Payload JSON: {json.dumps({'secret': request_payload['secret'][:10], 'nodes_count': len(request_payload['nodes'])})}")
 
                 async with session.post(
                         ALIYUN_FC_URL,

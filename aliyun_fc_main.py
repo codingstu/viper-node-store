@@ -13,11 +13,20 @@ def probe():
     # 1. 鉴权 - 从 POST body 中读取密钥
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Empty request body"}), 400
+        return jsonify({"error": "Empty request body", "received_data": None}), 400
     
     client_secret = data.get('secret')
+    
+    # 调试：返回收到的 secret 信息
     if client_secret != SECRET:
-        return jsonify({"error": "Unauthorized", "received": client_secret}), 401
+        return jsonify({
+            "error": "Unauthorized", 
+            "expected_secret_type": type(SECRET).__name__,
+            "received_secret_type": type(client_secret).__name__,
+            "received_secret_length": len(client_secret) if client_secret else 0,
+            "received_secret_first_10": client_secret[:10] if client_secret else None,
+            "data_keys": list(data.keys())
+        }), 401
 
     # 2. 获取节点列表
     try:
