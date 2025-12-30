@@ -121,6 +121,18 @@
             </div>
 
             <div class="flex items-center gap-2">
+                <!-- 地区切换按钮 -->
+                <div class="flex items-center border border-white/10 rounded-lg overflow-hidden bg-white/5">
+                    <button id="mainland-btn" onclick="switchRegion('mainland')"
+                        class="px-3 py-1.5 text-xs font-mono font-bold transition-all bg-emerald-600/20 text-emerald-400 border-r border-white/10">
+                        🇨🇳 大陆
+                    </button>
+                    <button id="overseas-btn" onclick="switchRegion('overseas')"
+                        class="px-3 py-1.5 text-xs font-mono font-bold transition-all hover:bg-white/10 text-gray-400 hover:text-white">
+                        🌍 海外
+                    </button>
+                </div>
+
                 <button onclick="openCnModal()" id="cn-btn"
                     class="hidden px-3 py-1.5 bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 rounded-lg text-xs font-mono font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
                     <span class="text-sm">🇨🇳</span> CN LINE
@@ -437,6 +449,42 @@
         const countryMap = { 'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国', 'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国', 'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚', 'IN': '印度', 'BR': '巴西', 'UNK': '未知' };
         let globalCnNodes = [];
         let globalNormalNodes = []; // 缓存普通节点用于筛选
+        
+        // 🌍 地区切换状态
+        let currentRegion = 'mainland'; // 默认大陆
+        let allRegionData = {
+            mainland: [],
+            overseas: []
+        };
+
+        // ================= 地区切换函数 =================
+        function switchRegion(region) {
+            currentRegion = region;
+            
+            // 更新按钮样式
+            const mainlandBtn = document.getElementById('mainland-btn');
+            const overseasBtn = document.getElementById('overseas-btn');
+            
+            if (region === 'mainland') {
+                mainlandBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all bg-emerald-600/20 text-emerald-400 border-r border-white/10';
+                overseasBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all hover:bg-white/10 text-gray-400 hover:text-white';
+            } else {
+                mainlandBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all hover:bg-white/10 text-gray-400 hover:text-white border-r border-white/10';
+                overseasBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all bg-emerald-600/20 text-emerald-400';
+            }
+            
+            // 重新渲染数据
+            const grid = document.getElementById('grid');
+            const empty = document.getElementById('empty-state');
+            
+            if (allRegionData[region].length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                renderNodes(allRegionData[region]);
+            }
+        }
 
         // 启动程序
         fetchData();
@@ -468,7 +516,7 @@
             }
         }
 
-        // 2. 获取节点数据
+        // 2. 获取节点数据 (支持地区切换)
         async function fetchData() {
             const loading = document.getElementById('loading');
             const grid = document.getElementById('grid');
@@ -487,32 +535,48 @@
                 const { user, isVip, vipDate } = await getVipStatus();
                 updateAuthUI(user, isVip, vipDate);
 
-                // B. 节点抓取 (使用 Anon Token 强制混合抓取)
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/nodes?select=content&order=is_free.desc`, {
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                // B. 节点抓取 (同时获取两个地区的数据)
+                // 🔥 [修复] 添加时间戳参数来强制绕过浏览器缓存，按 region 字段过滤
+                const timestamp = new Date().getTime();
+                
+                // 获取大陆节点
+                const mainlandResponse = await fetch(`${SUPABASE_URL}/rest/v1/nodes?select=content&region=eq.mainland&order=is_free.desc,speed.desc&t=${timestamp}`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+                    cache: 'no-store'
+                });
+                
+                // 获取海外节点
+                const overseasResponse = await fetch(`${SUPABASE_URL}/rest/v1/nodes?select=content&region=eq.overseas&order=is_free.desc,speed.desc&t=${timestamp}`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+                    cache: 'no-store'
                 });
 
-                if (!response.ok) throw new Error('Data Fetch Failed');
-                const rawData = await response.json();
-                let nodes = rawData ? rawData.map(item => item.content) : [];
-
-                if (nodes.length === 0) {
-                    loading.classList.add('hidden');
-                    empty.classList.remove('hidden');
-                    return;
-                }
+                if (!mainlandResponse.ok || !overseasResponse.ok) throw new Error('Data Fetch Failed');
+                
+                const mainlandRaw = await mainlandResponse.json();
+                const overseasRaw = await overseasResponse.json();
+                
+                let mainlandNodes = mainlandRaw ? mainlandRaw.map(item => item.content) : [];
+                let overseasNodes = overseasRaw ? overseasRaw.map(item => item.content) : [];
 
                 // C. 权限过滤
-                if (!isVip) nodes = nodes.slice(0, 20);
+                if (!isVip) {
+                    mainlandNodes = mainlandNodes.slice(0, 20);
+                    overseasNodes = overseasNodes.slice(0, 20);
+                }
 
-                // D. 分类与渲染
-                globalCnNodes = nodes.filter(n => n.country === 'CN');
-                globalNormalNodes = nodes.filter(n => n.country !== 'CN');
+                // D. 保存到全局变量
+                allRegionData.mainland = mainlandNodes;
+                allRegionData.overseas = overseasNodes;
+
+                // E. 分类与渲染
+                globalCnNodes = mainlandNodes.filter(n => n.country === 'CN');
+                globalNormalNodes = mainlandNodes.filter(n => n.country !== 'CN');
 
                 if (globalCnNodes.length > 0) cnBtn.classList.remove('hidden');
 
-                updateStats(nodes);
-                renderNodes(globalNormalNodes);
+                updateStats(allRegionData[currentRegion]);
+                renderNodes(allRegionData[currentRegion]);
                 loading.classList.add('hidden');
                 
                 // 重置筛选器
