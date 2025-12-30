@@ -33,6 +33,35 @@ jobs:
           python -m pip install --upgrade pip
           pip install aiohttp supabase requests aiodns
       
+      - name: Export nodes from API
+        env:
+          SHADOW_VIPER_API: ${{ secrets.SHADOW_VIPER_API }}
+        run: |
+          python << 'EOF'
+          import requests
+          import json
+          import os
+          
+          api_url = os.environ.get("SHADOW_VIPER_API", "")
+          if not api_url:
+              print("⚠️ SHADOW_VIPER_API 未设置，跳过节点导出")
+              exit(0)
+          
+          try:
+              print(f"📡 从 API 导出节点: {api_url[:50]}...")
+              response = requests.get(api_url, timeout=60)
+              if response.status_code == 200:
+                  nodes = response.json()
+                  os.makedirs('public', exist_ok=True)
+                  with open('public/nodes.json', 'w', encoding='utf-8') as f:
+                      json.dump(nodes, f, ensure_ascii=False, indent=2)
+                  print(f"✅ 导出成功: {len(nodes)} 个节点")
+              else:
+                  print(f"❌ API 返回错误: {response.status_code}")
+          except Exception as e:
+              print(f"❌ 导出失败: {e}")
+          EOF
+      
       - name: Run node testing script
         env:
           SHADOW_VIPER_API: ${{ secrets.SHADOW_VIPER_API }}
