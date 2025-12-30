@@ -269,7 +269,7 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
                                 pass
 
             except Exception as e:
-                print(f"     ❌ 批次请求异常: {e}")
+                print(f"     ❌ 批次请求异常: {type(e).__name__}: {str(e)}")
 
             # 避免触发频率限制
             await asyncio.sleep(0.5)
@@ -282,7 +282,7 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
 
 def save_to_supabase(nodes: List[Dict]):
     """
-    步骤3: 保存结果 (含整数修复)
+    步骤3: 保存结果 (含整数修复和去重)
     """
     if not SUPABASE_URL:
         return
@@ -293,9 +293,18 @@ def save_to_supabase(nodes: List[Dict]):
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
         data = []
+        seen_ids = set()  # 用于去重
+        
         for i, node in enumerate(nodes):
             # 构造唯一ID
-            node_id = f"{node['host']}:{node['port']}"
+            node_id = f"{node.get('host', 'unknown')}:{node.get('port', 'unknown')}"
+            
+            # 跳过重复的ID
+            if node_id in seen_ids:
+                print(f"⚠️ 跳过重复节点: {node_id}")
+                continue
+            
+            seen_ids.add(node_id)
 
             data.append({
                 "id": node_id,
@@ -307,16 +316,26 @@ def save_to_supabase(nodes: List[Dict]):
                 "updated_at": datetime.now().isoformat()
             })
 
+        if not data:
+            print("⚠️ 没有数据需要保存")
+            return
+
         # 分批写入
         batch_size = 50
+        total_saved = 0
         for i in range(0, len(data), batch_size):
             batch = data[i:i + batch_size]
-            supabase.table("nodes").upsert(batch).execute()
+            try:
+                supabase.table("nodes").upsert(batch).execute()
+                total_saved += len(batch)
+                print(f"  📝 批次 {i // batch_size + 1}: 保存 {len(batch)} 条")
+            except Exception as batch_error:
+                print(f"  ⚠️ 批次 {i // batch_size + 1} 保存失败: {batch_error}")
 
-        print(f"💾 成功保存 {len(data)} 条数据")
+        print(f"💾 成功保存 {total_saved} 条数据")
 
     except Exception as e:
-        print(f"❌ 数据库保存失败: {e}")
+        print(f"❌ 数据库保存失败: {type(e).__name__}: {e}")
 
 
 async def main():
