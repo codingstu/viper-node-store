@@ -11,6 +11,8 @@ import aiohttp
 import os
 import json
 import time
+import re
+from urllib.parse import urlparse
 from datetime import datetime
 from typing import List, Dict
 from email.utils import formatdate
@@ -34,6 +36,34 @@ print(f"🔧 [DEBUG] ALIYUN_SECRET: {'SET' if ALIYUN_SECRET else 'NOT SET'} (val
 
 
 # =================== 核心逻辑 ===================
+
+def extract_host_port(link: str) -> tuple:
+    """
+    从代理链接中提取 host 和 port
+    支持: vless://, vmess://, trojan://, ss:// 等
+    """
+    try:
+        # 解析 URL
+        parsed = urlparse(link)
+        host = parsed.hostname
+        port = parsed.port
+        
+        if host and port:
+            return host, port
+        
+        # 备选：从 netloc 手动解析
+        netloc = parsed.netloc
+        if '@' in netloc:
+            netloc = netloc.split('@')[1]
+        
+        if ':' in netloc:
+            parts = netloc.rsplit(':', 1)
+            return parts[0], int(parts[1])
+        
+        return None, None
+    except Exception as e:
+        print(f"🔧 [DEBUG] 解析链接失败: {e}")
+        return None, None
 
 async def fetch_nodes_from_api() -> List[Dict]:
     """
@@ -114,13 +144,31 @@ async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
             # 构造 Payload（包含密钥和节点列表）
             payload_nodes = []
             for n in batch:
+                # 提取 host 和 port
+                host = n.get('host')
+                port = n.get('port')
+                
+                # 如果没有 host/port，尝试从 link 字段解析
+                if not host or not port:
+                    link = n.get('link', '')
+                    host, port = extract_host_port(link)
+                
+                # 跳过无法解析的节点
+                if not host or not port:
+                    print(f"⚠️ 无法解析节点: {n.get('name', 'unknown')}")
+                    continue
+                
                 # 确保 id 存在
-                n_id = n.get("id") or f"{n['host']}:{n['port']}"
+                n_id = n.get("id") or n.get("name") or f"{host}:{port}"
                 payload_nodes.append({
                     "id": n_id,
-                    "host": n['host'],
-                    "port": int(n['port'])
+                    "host": host,
+                    "port": int(port)
                 })
+            
+            if not payload_nodes:
+                print(f"⚠️ 批次 {i // batch_size + 1} 没有有效节点")
+                continue
 
             # 完整的请求体：包含 secret 和 nodes
             request_payload = {

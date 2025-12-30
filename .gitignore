@@ -1,0 +1,28 @@
+# 隐私保护：不要将节点文件提交到公开仓库
+public/nodes.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 其他
+*.log
+.cache/
+dist/
+build/
