@@ -37,7 +37,7 @@ print(f"🔧 [DEBUG] ALIYUN_SECRET: {'SET' if ALIYUN_SECRET else 'NOT SET'} (val
 
 async def fetch_nodes_from_api() -> List[Dict]:
     """
-    步骤1: 获取原始节点 (带详细日志)
+    步骤1: 获取原始节点 (带重试机制)
     """
     if not API_URL:
         print("❌ 错误: SHADOW_VIPER_API 环境变量未设置")
@@ -51,24 +51,32 @@ async def fetch_nodes_from_api() -> List[Dict]:
     }
 
     # 增加超时时间以应对 GitHub Actions 网络环境
-    timeout = aiohttp.ClientTimeout(total=60, connect=30, sock_read=30)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
+    # 总超时 120 秒，连接 30 秒，读取 60 秒
+    timeout = aiohttp.ClientTimeout(total=120, connect=30, sock_read=60)
+    
+    max_retries = 3
+    for attempt in range(max_retries):
         try:
-            async with session.get(API_URL, headers=headers) as resp:
-                print(f"   📡 API 响应状态: {resp.status}")
-                if resp.status == 200:
-                    nodes = await resp.json()
-                    print(f"   📦 获取成功: {len(nodes)} 个原始节点")
-                    return nodes
-                else:
-                    text = await resp.text()
-                    print(f"   ❌ 获取失败: {text[:100]}")
-                    return []
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(API_URL, headers=headers) as resp:
+                    print(f"   📡 API 响应状态: {resp.status}")
+                    if resp.status == 200:
+                        nodes = await resp.json()
+                        print(f"   📦 获取成功: {len(nodes)} 个原始节点")
+                        return nodes
+                    else:
+                        text = await resp.text()
+                        print(f"   ❌ 获取失败: {text[:100]}")
+                        return []
         except Exception as e:
-            print(f"   ❌ 网络异常: {type(e).__name__}: {str(e) if str(e) else '未知错误'}")
-            print(f"   🔍 调试信息: API_URL={API_URL[:60]}...")
-            print(f"   💡 建议: 检查 API 是否使用 HTTPS，或增加超时时间")
-            return []
+            print(f"   ❌ 网络异常 (尝试 {attempt + 1}/{max_retries}): {type(e).__name__}")
+            if attempt < max_retries - 1:
+                print(f"   ⏳ 等待 5 秒后重试...")
+                await asyncio.sleep(5)
+            else:
+                print(f"   🔍 调试信息: API_URL={API_URL[:60]}...")
+                print(f"   💡 建议: 检查 API 服务器是否在线，或增加超时时间")
+                return []
 
 
 async def test_nodes_via_aliyun(nodes: List[Dict]) -> List[Dict]:
