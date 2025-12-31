@@ -67,7 +67,28 @@ export default {
 
       const allResults = await Promise.all(promises);
       
-      return new Response(JSON.stringify(allResults), {
+      // 将 latency 转换为 score（延迟越低，分数越高）
+      const scoredResults = allResults.map(result => {
+        let score = 0;
+        if (result.success && result.latency > 0) {
+          // 延迟转分数：0-100ms -> 100分，100-300ms -> 80分，300-500ms -> 60分，500ms以上 -> 40分
+          if (result.latency < 100) score = 100;
+          else if (result.latency < 300) score = Math.max(80, 100 - (result.latency - 100) / 200 * 20);
+          else if (result.latency < 500) score = Math.max(60, 80 - (result.latency - 300) / 200 * 20);
+          else score = Math.max(40, 60 - (result.latency - 500) / 500 * 20);
+        }
+        return {
+          id: result.id,
+          host: result.host,
+          port: result.port,
+          latency: result.latency,
+          score: Math.round(score),
+          success: result.success,
+          region: 'Global'
+        };
+      });
+      
+      return new Response(JSON.stringify(scoredResults), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });

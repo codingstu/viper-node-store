@@ -51,9 +51,24 @@ def probe():
                 success = False
 
             latency = int((time.perf_counter() - start) * 1000) if success else -1
+            
+            # 将延迟转换为分数
+            score = 0
+            if success and latency > 0:
+                # 延迟转分数：0-100ms -> 100分，100-300ms -> 80分，300-500ms -> 60分，500ms以上 -> 40分
+                if latency < 100:
+                    score = 100
+                elif latency < 300:
+                    score = max(80, 100 - (latency - 100) / 200 * 20)
+                elif latency < 500:
+                    score = max(60, 80 - (latency - 300) / 200 * 20)
+                else:
+                    score = max(40, 60 - (latency - 500) / 500 * 20)
+            
             results.append({
                 "id": node_id,
                 "latency": latency,
+                "score": int(score),
                 "success": success
             })
 

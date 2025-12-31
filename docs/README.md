@@ -23,7 +23,9 @@
 
 ### 💾 数据管理
 - Supabase 云数据库存储
-- 自动去重 (防止重复)
+- **自动去重** (protocol+host:port 作为唯一标准)
+- **TTL管理** (3天后自动验证，7天离线自动删除)
+- **活力检查** (每天凌晨2:00验证所有3天+的节点)
 - VIP 用户和免费用户区分
 
 ### 🌐 智能前端
@@ -325,6 +327,7 @@ A: 检查:
 | 文档 | 说明 |
 |------|------|
 | [QUICKSTART.md](./QUICKSTART.md) | **👈 从这里开始** 3 分钟快速部署 |
+| [NODE_LIFECYCLE.md](./NODE_LIFECYCLE.md) | **🔄 节点管理系统** - 去重、TTL、验证、清理 |
 | [CLOUDFLARE_SETUP.md](./CLOUDFLARE_SETUP.md) | Cloudflare Worker 详细部署指南 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 系统架构、数据流、性能分析 |
 | [UPGRADE_SUMMARY.md](./UPGRADE_SUMMARY.md) | 最新更改和改进总结 |

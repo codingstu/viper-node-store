@@ -138,6 +138,12 @@
                     <span class="text-sm">🇨🇳</span> CN LINE
                 </button>
 
+                <button onclick="toggleSpeedTestModal()" id="speedtest-btn"
+                    class="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 rounded-lg text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1.5"
+                    title="触发双区域测速">
+                    <span class="text-sm">⚡</span> TEST
+                </button>
+
                 <button onclick="toggleAuthModal()" id="auth-btn"
                     class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-mono font-bold text-gray-400 hover:text-white transition-colors">
                     LOGIN
@@ -161,6 +167,23 @@
     </div>
 
     <main class="max-w-7xl mx-auto px-4 pt-24">
+        <!-- 同步状态横幅 -->
+        <div class="glass-card rounded-xl p-3 mb-6 border border-white/5 bg-gradient-to-r from-emerald-500/5 to-transparent">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></div>
+                    <div class="text-sm font-mono">
+                        <span class="text-gray-400">数据同步: </span>
+                        <span id="sync-time-display" class="text-emerald-400 font-bold">正在加载...</span>
+                        <span class="text-gray-600 text-xs ml-2">(<span id="nodes-count">0</span>个活跃节点)</span>
+                    </div>
+                </div>
+                <button onclick="triggerPollAndRefresh()" class="px-2 py-1 text-xs text-gray-400 hover:text-gray-300 transition-colors hover:bg-white/5 rounded" title="手动触发同步并刷新显示">
+                    🔄 刷新
+                </button>
+            </div>
+        </div>
+
         <!-- 质量说明卡片 -->
         <div class="glass-card rounded-xl p-4 mb-6 border border-white/5">
             <div class="flex flex-wrap items-center justify-between gap-4">
@@ -271,6 +294,64 @@
 
     <textarea id="all-links" class="hidden"></textarea>
 
+    <!-- 双区测速模态框 -->
+    <div id="speedtest-modal" class="fixed inset-0 z-[115] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="toggleSpeedTestModal()"></div>
+        <div class="relative glass-card p-6 rounded-2xl w-full max-w-md border border-cyan-500/20 animate-fade-in z-20 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-2 tracking-wide flex items-center gap-2">
+                <span class="text-xl">⚡</span> 双区域测速
+            </h3>
+            <p class="text-xs text-gray-500 font-mono mb-4" id="speedtest-status">准备开始...</p>
+            
+            <div id="speedtest-idle" class="space-y-3">
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    此操作将通过 Aliyun FC（大陆）和 Cloudflare Workers（海外）对所有节点进行双地区测速，预计耗时 <strong>5-10 分钟</strong>。
+                </p>
+                <div class="flex gap-2">
+                    <button onclick="startSpeedTest()" 
+                        class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        开始测速
+                    </button>
+                    <button onclick="toggleSpeedTestModal()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+
+            <div id="speedtest-running" class="hidden space-y-3">
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-gray-400">测速进度</span>
+                        <span class="text-cyan-400 font-mono font-bold" id="speedtest-progress">--</span>
+                    </div>
+                    <div class="h-2 w-full bg-black/40 rounded-full overflow-hidden">
+                        <div id="speedtest-bar" class="h-full bg-cyan-500 w-0 transition-all duration-300"></div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 font-mono space-y-1">
+                    <div>📡 大陆测速: <span id="mainland-status" class="text-gray-400">等待中...</span></div>
+                    <div>🌍 海外测速: <span id="overseas-status" class="text-gray-400">等待中...</span></div>
+                </div>
+                <button onclick="toggleSpeedTestModal()" disabled
+                    class="w-full bg-gray-700/20 text-gray-500 py-2.5 rounded-lg text-sm font-bold cursor-not-allowed">
+                    测速进行中，请等待...
+                </button>
+            </div>
+
+            <div id="speedtest-done" class="hidden space-y-3">
+                <div class="bg-cyan-500/10 border border-cyan-500/30 p-3 rounded-lg">
+                    <p class="text-sm text-cyan-400 font-bold">✅ 测速完成！</p>
+                    <p class="text-xs text-gray-400 mt-1" id="speedtest-result-msg">正在刷新页面...</p>
+                </div>
+                <button onclick="toggleSpeedTestModal()"
+                    class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="qr-modal" class="fixed inset-0 z-[120] hidden flex items-center justify-center px-4">
         <div class="absolute inset-0 modal-overlay" onclick="closeQR()"></div>
         <div
@@ -342,6 +423,103 @@
                     </path>
                 </svg>
             </button>
+        </div>
+    </div>
+
+    <!-- 精确测速模态框 -->
+    <div id="precision-test-modal" class="fixed inset-0 z-[108] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="closePrecisionTestModal()"></div>
+        <div class="relative glass-card p-6 rounded-2xl w-full max-w-md border border-purple-500/20 animate-fade-in z-20 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+                    <span class="text-2xl">⚡</span> 精确测速
+                </h3>
+                <button onclick="closePrecisionTestModal()" class="text-gray-500 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="precision-test-content" class="mb-4">
+                <p class="text-sm text-gray-400 mb-3">选择测试文件大小（将消耗对应流量）：</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="selectPrecisionTestSize(10)" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-purple-500/20 text-gray-300 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all">
+                        10 MB
+                    </button>
+                    <button onclick="selectPrecisionTestSize(25)" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-purple-500/20 text-gray-300 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all">
+                        25 MB
+                    </button>
+                    <button onclick="selectPrecisionTestSize(50)" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-purple-500/20 text-gray-300 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all">
+                        50 MB
+                    </button>
+                    <button onclick="selectPrecisionTestSize(100)" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-purple-500/20 text-gray-300 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all">
+                        100 MB
+                    </button>
+                </div>
+            </div>
+
+            <div id="precision-test-confirm" class="hidden">
+                <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-gray-300 mb-3">确认测速参数：</p>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>文件大小:</span>
+                            <span class="text-purple-300" id="confirm-test-size">50 MB</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>预计流量消耗:</span>
+                            <span class="text-purple-300" id="confirm-traffic">50 MB</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>预计耗时:</span>
+                            <span class="text-purple-300">1-30 秒</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-amber-400 mt-3">⚠️ 精确测速会消耗对应流量，请确认后再开始</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="cancelPrecisionTest()" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-red-500/20 text-gray-300 hover:text-red-400 border border-white/5 hover:border-red-500/30 transition-all">
+                        取消
+                    </button>
+                    <button onclick="confirmPrecisionTest()" class="py-2 px-3 rounded-lg text-sm bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-purple-400 border border-purple-500/30 hover:border-purple-500/50 transition-all font-bold">
+                        确认开始
+                    </button>
+                </div>
+            </div>
+
+            <div id="precision-test-running" class="hidden">
+                <div class="space-y-3">
+                    <p class="text-xs text-gray-400">测试进行中，请稍候...</p>
+                    <div class="w-full h-2 bg-black/40 rounded-full overflow-hidden">
+                        <div id="precision-test-progress-bar" class="h-full bg-purple-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 text-center"><span id="precision-test-progress-text">0%</span></p>
+                </div>
+            </div>
+
+            <div id="precision-test-result" class="hidden">
+                <div class="space-y-3 bg-white/5 p-3 rounded-lg">
+                    <p class="text-sm font-bold text-purple-400" id="precision-test-result-title">测试完成</p>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-500">下载速度</span>
+                            <span class="text-white font-mono" id="precision-test-speed">-- MB/s</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-500">用时</span>
+                            <span class="text-white font-mono" id="precision-test-time">-- s</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-500">流量消耗</span>
+                            <span class="text-white font-mono" id="precision-test-traffic">-- MB</span>
+                        </div>
+                    </div>
+                    <button onclick="closePrecisionTestModal()" class="w-full mt-3 py-2 px-3 rounded-lg text-sm bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 border border-purple-500/30 transition-all">
+                        关闭
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -436,8 +614,12 @@
         const SUPABASE_URL = 'https://hnlkwtkxbqiakeyienok.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME';
 
-        // 后端 API 地址 (通过 Cloudflare Tunnel)
-        const VIPER_API_BASE = 'https://api.996828.xyz';
+        // 🔥 改进：优先使用本地 SpiderFlow 后端，然后才是 Cloudflare Tunnel
+        // 本地开发环境：localhost:8000
+        // 云端部署：https://api.996828.xyz
+        const VIPER_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8000'
+            : 'https://api.996828.xyz';
 
         let supabaseClient;
         if (typeof supabase !== 'undefined') {
@@ -450,11 +632,11 @@
         let globalCnNodes = [];
         let globalNormalNodes = []; // 缓存普通节点用于筛选
         
-        // 🌍 地区切换状态
+        // ================= 地区切换状态 =================
         let currentRegion = 'mainland'; // 默认大陆
         let allRegionData = {
-            mainland: [],
-            overseas: []
+            mainland: [],     // 大陆节点（有mainland_score或基础大陆节点）
+            overseas: []      // 海外节点（有overseas_score或基础海外节点）
         };
 
         // ================= 地区切换函数 =================
@@ -473,21 +655,37 @@
                 overseasBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all bg-emerald-600/20 text-emerald-400';
             }
             
-            // 重新渲染数据
+            // 重新渲染数据 - 使用当前分类的存储数据
             const grid = document.getElementById('grid');
             const empty = document.getElementById('empty-state');
             
-            if (allRegionData[region].length === 0) {
+            const nodesToDisplay = allRegionData[region] || [];
+            
+            if (nodesToDisplay.length === 0) {
                 grid.innerHTML = '';
                 empty.classList.remove('hidden');
+                empty.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-gray-400 text-sm">暂无${region === 'mainland' ? '大陆' : '海外'}节点数据</p>
+                        <p class="text-gray-500 text-xs mt-2">请稍候，或检查数据源</p>
+                    </div>
+                `;
             } else {
                 empty.classList.add('hidden');
-                renderNodes(allRegionData[region]);
+                // 保存到全局节点列表，以便筛选和排序使用
+                globalNormalNodes = nodesToDisplay;
+                updateStats(nodesToDisplay);
+                renderNodes(nodesToDisplay);
             }
         }
 
         // 启动程序
-        fetchData();
+        (async () => {
+            await fetchData();
+            // fetchData完成后立即获取同步信息
+            fetchSyncInfo();
+        })();
+        
         initTelemetry(); // 启动监控遥测
 
         // ================= 核心功能函数 =================
@@ -529,54 +727,153 @@
             cnBtn.classList.add('hidden');
 
             try {
-                if (!supabaseClient) throw new Error("Supabase client not initialized");
-
                 // A. 身份检查
                 const { user, isVip, vipDate } = await getVipStatus();
                 updateAuthUI(user, isVip, vipDate);
 
-                // B. 节点抓取 (同时获取两个地区的数据)
-                // 🔥 [修复] 添加时间戳参数来强制绕过浏览器缓存，按 region 字段过滤
-                const timestamp = new Date().getTime();
-                
-                // 获取大陆节点
-                const mainlandResponse = await fetch(`${SUPABASE_URL}/rest/v1/nodes?select=content&region=eq.mainland&order=is_free.desc,speed.desc&t=${timestamp}`, {
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
-                    cache: 'no-store'
-                });
-                
-                // 获取海外节点
-                const overseasResponse = await fetch(`${SUPABASE_URL}/rest/v1/nodes?select=content&region=eq.overseas&order=is_free.desc,speed.desc&t=${timestamp}`, {
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+                // B. 从后端 SpiderFlow 直接获取节点数据
+                const response = await fetch(`http://127.0.0.1:8000/api/nodes?limit=500`, {
+                    method: 'GET',
                     cache: 'no-store'
                 });
 
-                if (!mainlandResponse.ok || !overseasResponse.ok) throw new Error('Data Fetch Failed');
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error('Proxy error:', response.status, errorData);
+                    throw new Error(`API error: ${response.status}`);
+                }
                 
-                const mainlandRaw = await mainlandResponse.json();
-                const overseasRaw = await overseasResponse.json();
-                
-                let mainlandNodes = mainlandRaw ? mainlandRaw.map(item => item.content) : [];
-                let overseasNodes = overseasRaw ? overseasRaw.map(item => item.content) : [];
-
-                // C. 权限过滤
-                if (!isVip) {
-                    mainlandNodes = mainlandNodes.slice(0, 20);
-                    overseasNodes = overseasNodes.slice(0, 20);
+                const rawNodes = await response.json();
+                if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
+                    // 节点正在检测中，显示友好消息而不是抛出错误
+                    empty.classList.remove('hidden');
+                    empty.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full">
+                            <div class="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4 animate-pulse">
+                                <span class="text-4xl">⏳</span>
+                            </div>
+                            <p class="text-gray-400 text-lg font-semibold mb-2">节点检测中...</p>
+                            <p class="text-gray-500 text-sm max-w-md text-center">
+                                后端正在抓取和验证节点，这通常需要 2-5 分钟<br/>
+                                请稍候并刷新页面查看最新节点
+                            </p>
+                            <button onclick="fetchNodes()" class="mt-6 px-6 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg transition-colors">
+                                🔄 刷新
+                            </button>
+                        </div>
+                    `;
+                    loading.classList.add('hidden');
+                    return;
                 }
 
-                // D. 保存到全局变量
-                allRegionData.mainland = mainlandNodes;
-                allRegionData.overseas = overseasNodes;
+                // 解析节点内容
+                const allNodes = rawNodes.map(item => {
+                    try {
+                        const nodeContent = typeof item.content === 'string' ? JSON.parse(item.content) : item.content;
+                        return {
+                            // 保留原始 item 的所有字段，然后合并 nodeContent
+                            ...item,
+                            // 确保 nodeContent 中的字段被合并，但 item 的优先级更高（特别是 link）
+                            ...nodeContent,
+                            // 再次显式保证这些关键字段使用 item 中的值
+                            link: item.link || nodeContent.subscribe_link,
+                            // 添加测试数据字段（从 Supabase 直接取，或从 SpiderFlow 后端获取）
+                            speed: item.speed || 0,
+                            latency: item.latency || 0,
+                            is_free: item.is_free || false,
+                            mainland_score: item.mainland_score || 0,
+                            mainland_latency: item.mainland_latency || 0,
+                            overseas_score: item.overseas_score || 0,
+                            overseas_latency: item.overseas_latency || 0
+                        };
+                    } catch (e) {
+                        console.error('Failed to parse node:', e);
+                        return null;
+                    }
+                }).filter(n => n !== null);
 
-                // E. 分类与渲染
-                globalCnNodes = mainlandNodes.filter(n => n.country === 'CN');
-                globalNormalNodes = mainlandNodes.filter(n => n.country !== 'CN');
+                // C. 精确分类节点（优先用分数，没有分数就用 alive 状态）
+                
+                // 提取 CN 国家的节点（country === 'CN'）
+                const cnAllNodes = allNodes.filter(n => n.country === 'CN');
+                
+                // 非 CN 的节点
+                const nonCnNodes = allNodes.filter(n => n.country !== 'CN');
+                
+                // 大陆节点 = 有mainland_score的节点 或 活着的节点（直接用基础检测结果）
+                let mainlandNodes = nonCnNodes.filter(n => {
+                    // 优先用分数数据（Aliyun FC 测速结果）
+                    if (typeof n.mainland_score === 'number' && n.mainland_score > 0) {
+                        return true;
+                    }
+                    // 没有分数，就用基础活节点
+                    return n.alive === true || n.available === true;
+                });
 
-                if (globalCnNodes.length > 0) cnBtn.classList.remove('hidden');
+                // 海外节点 = 有overseas_score的节点 或 活着的节点
+                let overseasNodes = nonCnNodes.filter(n => {
+                    // 优先用分数数据（Cloudflare 测速结果）
+                    if (typeof n.overseas_score === 'number' && n.overseas_score > 0) {
+                        return true;
+                    }
+                    // 没有分数，就用基础活节点
+                    return n.alive === true || n.available === true;
+                });
 
-                updateStats(allRegionData[currentRegion]);
-                renderNodes(allRegionData[currentRegion]);
+                // 如果大陆和海外都没有节点，就都用所有活节点（兜底）
+                if (mainlandNodes.length === 0 && overseasNodes.length === 0) {
+                    const aliveNodes = nonCnNodes.filter(n => n.alive === true || n.available === true);
+                    if (aliveNodes.length > 0) {
+                        mainlandNodes = aliveNodes.slice(0, Math.ceil(aliveNodes.length / 2));
+                        overseasNodes = aliveNodes.slice(Math.ceil(aliveNodes.length / 2));
+                    }
+                }
+                
+                // D. 权限过滤
+                let filteredMainland = mainlandNodes;
+                let filteredOverseas = overseasNodes;
+                
+                if (!isVip) {
+                    filteredMainland = filteredMainland.slice(0, 20);
+                    filteredOverseas = filteredOverseas.slice(0, 20);
+                }
+
+                // E. 保存到全局变量（确保大陆和海外分开）
+                allRegionData.mainland = filteredMainland;
+                allRegionData.overseas = filteredOverseas;
+                
+                // 保存所有节点数据到 window.nodesData，用于精准测速时查找节点对象
+                window.nodesData = allNodes;
+                
+                // F. CN 回国节点（单独提取，只在弹窗显示）
+                globalCnNodes = cnAllNodes.filter(n => n.alive === true || n.available === true).slice(0, isVip ? 50 : 10);
+                
+                // G. 默认显示：严格按分数显示；若没有当前区域分数但有部分已测节点，则显示快照
+                const scoredNodes = allNodes.filter(n => (typeof n.mainland_score === 'number' && n.mainland_score > 0) || (typeof n.overseas_score === 'number' && n.overseas_score > 0));
+
+// G. 显示逻辑：有分数或有基础数据就显示
+                if (filteredMainland.length > 0 || filteredOverseas.length > 0) {
+                    // 有节点数据（分数或基础），显示对应分类
+                    empty.classList.add('hidden');
+                    updateStats(allRegionData[currentRegion]);
+                    renderNodes(allRegionData[currentRegion]);
+                } else {
+                    // 没有任何节点数据
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    document.getElementById('empty-state').innerHTML = `
+                        <div class="text-center">
+                            <p class="text-gray-400 text-sm">⏳ 节点检测中...</p>
+                            <p class="text-gray-500 text-xs mt-2">后端正在获取和验证节点，请稍候</p>
+                        </div>
+                    `;
+                }
+
+                // H. 显示或隐藏 CN 弹窗按钮（有 CN 节点就显示）
+                if (globalCnNodes.length > 0) {
+                    cnBtn.classList.remove('hidden');
+                } else {
+                    cnBtn.classList.add('hidden');
+                }
                 loading.classList.add('hidden');
                 
                 // 重置筛选器
@@ -585,7 +882,22 @@
 
             } catch (err) {
                 console.error(err);
-                loading.innerHTML = `<span class="text-red-500 text-sm font-mono">CONNECTION FAILED: ${err.message}</span>`;
+                empty.classList.remove('hidden');
+                empty.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full">
+                        <div class="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                            <span class="text-4xl">❌</span>
+                        </div>
+                        <p class="text-red-400 text-lg font-semibold mb-2">连接失败</p>
+                        <p class="text-gray-500 text-sm max-w-md text-center mb-4">
+                            ${err.message}
+                        </p>
+                        <button onclick="fetchNodes()" class="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors">
+                            🔄 重试
+                        </button>
+                    </div>
+                `;
+                loading.classList.add('hidden');
             }
         }
 
@@ -712,7 +1024,7 @@
             const cnName = countryMap[node.country] || node.country || '境外';
 
             // 1. 获取基础数据 (这里只定义一次，防止报错)
-            const latency = node.latency_ms || 0;
+            const latency = node.latency || node.latency_ms || 0;
             const successRate = node.success_rate || 100;
 
             // 2. 修正速度显示 (强制限制在 100MB/s 以内，保留1位小数)
@@ -784,7 +1096,8 @@
                     <div class="h-full ${barColor} ${glowClass} transition-all duration-700" style="width: ${Math.min(qualityScore, 100)}%"></div>
                 </div>
                 <div class="grid grid-cols-4 gap-2 mt-3">
-                    <button onclick="copyLink('${node.link}')" class="col-span-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] tracking-wide">COPY LINK</button>
+                    <button onclick="copyLink('${node.link}')" class="col-span-2 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] tracking-wide">COPY</button>
+                    <button onclick="openPrecisionTestModal('${node.link}', '${cnName}')" class="col-span-1 py-1.5 rounded-lg text-xs flex items-center justify-center bg-white/5 hover:bg-purple-500/20 text-gray-400 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all active:scale-[0.98]" title="精确测速">⚡</button>
                     <button onclick="showQR('${node.link}', '${cnName} ${node.protocol}')" class="col-span-1 py-1.5 rounded-lg text-xs flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/5 transition-all active:scale-[0.98]">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                     </button>
@@ -847,8 +1160,8 @@
                 case 'latency':
                     // 延迟越低越好，无延迟数据的排后面
                     sorted.sort((a, b) => {
-                        const la = a.latency_ms || 9999;
-                        const lb = b.latency_ms || 9999;
+                        const la = (a.latency || a.latency_ms) || 9999;
+                        const lb = (b.latency || b.latency_ms) || 9999;
                         return la - lb;
                     });
                     break;
@@ -932,6 +1245,335 @@
             } catch (e) { console.error(e); }
         }
 
+        // ================= 精确测速逻辑 =================
+        let currentTestNode = { link: '', name: '', nodeObject: null };
+        let selectedTestSize = 0;
+
+        function openPrecisionTestModal(link, nodeName) {
+            // 在全局数据中查找节点对象
+            let nodeObject = null;
+            if (window.nodesData) {
+                nodeObject = window.nodesData.find(n => n.link === link);
+            }
+            if (!nodeObject && window.globalCnNodes) {
+                nodeObject = window.globalCnNodes.find(n => n.link === link);
+            }
+            
+            console.log('===== 打开精准测速弹框 =====');
+            console.log('节点名称:', nodeName);
+            console.log('节点link:', link);
+            console.log('找到的节点对象:', nodeObject);
+            if (nodeObject) {
+                console.log('节点host:', nodeObject.host);
+                console.log('节点port:', nodeObject.port);
+                console.log('节点当前速度:', nodeObject.speed);
+            }
+            
+            currentTestNode = { link, name: nodeName, nodeObject };
+            selectedTestSize = 0;
+            document.getElementById('precision-test-modal').classList.remove('hidden');
+            // 重置 UI 到文件大小选择
+            document.getElementById('precision-test-content').classList.remove('hidden');
+            document.getElementById('precision-test-confirm').classList.add('hidden');
+            document.getElementById('precision-test-running').classList.add('hidden');
+            document.getElementById('precision-test-result').classList.add('hidden');
+        }
+
+        function closePrecisionTestModal() {
+            document.getElementById('precision-test-modal').classList.add('hidden');
+            selectedTestSize = 0;
+        }
+
+        function selectPrecisionTestSize(sizeInMb) {
+            selectedTestSize = sizeInMb;
+            // 显示确认界面
+            document.getElementById('precision-test-content').classList.add('hidden');
+            document.getElementById('precision-test-confirm').classList.remove('hidden');
+            document.getElementById('precision-test-running').classList.add('hidden');
+            document.getElementById('precision-test-result').classList.add('hidden');
+            
+            // 更新确认信息
+            document.getElementById('confirm-test-size').innerText = `${sizeInMb} MB`;
+            document.getElementById('confirm-traffic').innerText = `${sizeInMb} MB`;
+        }
+
+        function cancelPrecisionTest() {
+            // 返回文件大小选择
+            document.getElementById('precision-test-content').classList.remove('hidden');
+            document.getElementById('precision-test-confirm').classList.add('hidden');
+            selectedTestSize = 0;
+        }
+
+        function confirmPrecisionTest() {
+            if (selectedTestSize > 0) {
+                startPrecisionTest(selectedTestSize);
+            }
+        }
+
+        let progressInterval = null;
+        let currentProgress = 0;
+
+        async function startPrecisionTest(fileSizeMs) {
+            document.getElementById('precision-test-confirm').classList.add('hidden');
+            document.getElementById('precision-test-running').classList.remove('hidden');
+            document.getElementById('precision-test-result').classList.add('hidden');
+            
+            // 重置进度条
+            currentProgress = 0;
+            updateProgressBar(0);
+            
+            // 启动模拟进度条（平滑增长到 95%）
+            startProgressSimulation();
+            
+            try {
+                console.log(`开始精确测速 | 节点: ${currentTestNode.name} | 文件大小: ${fileSizeMs}MB`);
+                
+                // 调用后端 API
+                const response = await fetch('http://localhost:8002/api/nodes/precision-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        proxy_url: currentTestNode.link,
+                        test_file_size: fileSizeMs
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('精确测速结果:', data);
+
+                // 停止模拟进度，设置为 100%
+                stopProgressSimulation();
+                updateProgressBar(100);
+                
+                // 短暂延迟后显示结果
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // 显示结果
+                showPrecisionTestResult(data);
+                
+            } catch (error) {
+                console.error('精确测速失败:', error);
+                stopProgressSimulation();
+                showPrecisionTestResult({
+                    status: 'error',
+                    speed_mbps: 0,
+                    message: `测速失败: ${error.message}`
+                });
+            }
+        }
+
+        function startProgressSimulation() {
+            // 清除之前的定时器
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+            
+            currentProgress = 0;
+            
+            // 每 150ms 增加进度
+            progressInterval = setInterval(() => {
+                if (currentProgress < 95) {
+                    // 使用非线性增长，开始快，后面慢
+                    const increment = Math.max(0.5, (95 - currentProgress) / 20);
+                    currentProgress = Math.min(95, currentProgress + increment);
+                    updateProgressBar(Math.floor(currentProgress));
+                }
+            }, 150);
+        }
+
+        function stopProgressSimulation() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+
+        function updateProgressBar(percent) {
+            const progressBar = document.querySelector('#precision-test-running .bg-purple-600');
+            const progressText = document.querySelector('#precision-test-running .text-center');
+            
+            if (progressBar) {
+                progressBar.style.width = percent + '%';
+            }
+            if (progressText) {
+                progressText.textContent = percent + '%';
+            }
+        }
+
+        function showPrecisionTestResult(result) {
+            document.getElementById('precision-test-running').classList.add('hidden');
+            document.getElementById('precision-test-result').classList.remove('hidden');
+            
+            if (result.status === 'success' || result.status === 'partial_success') {
+                document.getElementById('precision-test-result-title').innerText = `✅ ${result.message}`;
+                document.getElementById('precision-test-speed').innerText = `${result.speed_mbps} MB/s`;
+                document.getElementById('precision-test-time').innerText = `${result.download_time_seconds}s`;
+                document.getElementById('precision-test-traffic').innerText = `${result.traffic_consumed_mb}MB`;
+                
+                console.log('===== 测速完成，准备更新UI =====');
+                console.log('测速结果速度:', result.speed_mbps, 'MB/s');
+                console.log('currentTestNode:', currentTestNode);
+                
+                // 立即更新节点数据和卡片显示
+                if (currentTestNode.nodeObject) {
+                    console.log('更新前 - 节点对象速度:', currentTestNode.nodeObject.speed);
+                    currentTestNode.nodeObject.speed = result.speed_mbps;
+                    console.log('更新后 - 节点对象速度:', currentTestNode.nodeObject.speed);
+                    
+                    // 直接更新DOM
+                    updateNodeCardUI(currentTestNode.nodeObject);
+                    
+                    // 立即进行延迟测速（不等待用户关闭弹框）
+                    console.log('开始自动延迟测速...');
+                    testLatency(currentTestNode.link, currentTestNode.name);
+                } else {
+                    console.error('❌ currentTestNode.nodeObject 为空，无法更新');
+                }
+            } else {
+                document.getElementById('precision-test-result-title').innerText = `❌ 测速失败`;
+                document.getElementById('precision-test-speed').innerText = '-- MB/s';
+                document.getElementById('precision-test-time').innerText = '-- s';
+                document.getElementById('precision-test-traffic').innerText = `${result.message || '未知错误'}`;
+            }
+        }
+
+        function updateNodeCardUI(node) {
+            console.log('===== updateNodeCardUI 开始 =====');
+            console.log('节点对象:', node);
+            console.log('节点host:', node.host, '节点port:', node.port);
+            
+            const rawSpeed = node.speed || 0;
+            const displaySpeed = Math.min(rawSpeed, 100).toFixed(1);
+            const speedPercent = Math.min((rawSpeed / 100) * 100, 100);
+            
+            console.log('原始速度:', rawSpeed);
+            console.log('显示速度:', displaySpeed);
+            console.log('进度条百分比:', speedPercent);
+            
+            // 重新计算质量评分
+            let qualityScore;
+            if (rawSpeed >= 10) qualityScore = 80;
+            else if (rawSpeed >= 5) qualityScore = 60;
+            else if (rawSpeed >= 2) qualityScore = 40;
+            else qualityScore = 20;
+            
+            // 确定样式
+            let speedColor = 'text-gray-500', barColor = 'bg-gray-700';
+            if (qualityScore >= 70) {
+                speedColor = 'text-emerald-400';
+                barColor = 'bg-emerald-500';
+            } else if (qualityScore >= 40) {
+                speedColor = 'text-amber-400';
+                barColor = 'bg-amber-500';
+            } else if (qualityScore > 0) {
+                speedColor = 'text-rose-400';
+                barColor = 'bg-rose-500';
+            }
+            
+            console.log('样式 - speedColor:', speedColor, 'barColor:', barColor);
+            
+            // 尝试用ID找到卡片
+            const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-');
+            console.log('计算的节点ID:', nodeId);
+            
+            let card = document.getElementById(nodeId);
+            console.log('找到的卡片元素:', card);
+            
+            if (card) {
+                console.log('✅ 通过ID找到节点卡片:', nodeId);
+                
+                // 获取text-right容器
+                const textRight = card.querySelector('div.text-right');
+                console.log('text-right容器:', textRight);
+                
+                if (textRight) {
+                    // 更新速度显示 - 第一个子div
+                    const speedDiv = textRight.children[0];
+                    console.log('speedDiv:', speedDiv);
+                    
+                    if (speedDiv) {
+                        speedDiv.className = `font-mono text-xs font-bold ${speedColor}`;
+                        speedDiv.innerHTML = `${displaySpeed} <span class="text-[9px] opacity-70">MB/s</span>`;
+                        console.log('✅ 已更新速度:', displaySpeed);
+                    }
+                }
+                
+                // 更新进度条
+                const progressContainer = card.querySelector('div.overflow-hidden.h-1\\.5, div[class*="h-1.5"]');
+                console.log('进度条容器:', progressContainer);
+                
+                if (progressContainer) {
+                    const innerBar = progressContainer.querySelector('div');
+                    console.log('进度条内部元素:', innerBar);
+                    
+                    if (innerBar) {
+                        innerBar.style.width = speedPercent + '%';
+                        innerBar.className = `h-full ${barColor} transition-all duration-700`;
+                        console.log('✅ 已更新进度条:', speedPercent + '%');
+                    }
+                }
+            } else {
+                console.error('❌ 未找到节点卡片, nodeId:', nodeId);
+                console.log('页面上的所有卡片ID:');
+                document.querySelectorAll('.glass-card[id]').forEach(c => {
+                    console.log('  -', c.id);
+                });
+            }
+        }
+
+        async function testLatency(proxyUrl, nodeName) {
+            try {
+                console.log(`开始延迟测速: ${nodeName}`);
+                const response = await fetch('http://localhost:8002/api/nodes/latency-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proxy_url: proxyUrl })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('延迟测速结果:', data);
+                    
+                    // 更新节点延迟数据
+                    if (currentTestNode.nodeObject && data.latency) {
+                        currentTestNode.nodeObject.latency = data.latency;
+                        updateNodeLatencyUI(currentTestNode.nodeObject);
+                    }
+                }
+            } catch (error) {
+                console.error('延迟测速失败:', error);
+            }
+        }
+
+        function updateNodeLatencyUI(node) {
+            console.log('更新节点延迟UI - 寻找节点:', `${node.host}:${node.port}`);
+            
+            const latency = node.latency || 0;
+            const latencyText = latency > 0 ? `${Math.round(latency)}ms` : '--';
+            const latencyColor = latency > 0 ? 
+                (latency < 300 ? 'text-emerald-400' : 
+                 latency < 800 ? 'text-amber-400' : 
+                 'text-rose-400') : 
+                'text-gray-500';
+            
+            // 用ID直接找到延迟显示元素
+            const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-');
+            const latencyElement = document.getElementById(`${nodeId}-latency`);
+            
+            if (latencyElement) {
+                console.log('✅ 找到延迟显示元素:', `${nodeId}-latency`);
+                latencyElement.className = `font-mono text-[10px] ${latencyColor} flex items-center justify-end gap-1`;
+                latencyElement.innerHTML = `<span class="opacity-50 text-[8px]">⚡</span>${latencyText}`;
+                console.log('✅ 已更新延迟:', latencyText);
+            } else {
+                console.warn('❌ 未找到延迟显示元素:', `${nodeId}-latency`);
+            }
+        }
+
         // ================= 登录注册逻辑 =================
         async function checkUserStatus() {
             const { user, isVip, vipDate } = await getVipStatus();
@@ -982,6 +1624,187 @@
                 checkUserStatus();
                 fetchData();
             } catch (e) { showToast("SYSTEM ERROR"); }
+        }
+
+        // ================= ⚡ 双区域测速控制 =================
+        let speedTestInProgress = false;
+
+        function toggleSpeedTestModal() {
+            const modal = document.getElementById('speedtest-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                // 打开模态框时检查当前状态
+                checkSpeedTestStatus();
+            }
+        }
+
+        async function checkSpeedTestStatus() {
+            try {
+                const res = await fetch(`${VIPER_API_BASE}/nodes/stats`);
+                if (!res.ok) throw new Error('Failed to fetch status');
+                const data = await res.json();
+                
+                // 检查是否正在测速（通过日志判断）
+                const logs = data.logs || [];
+                const allLogsText = logs.join('\n');
+                
+                // 严格判定：看最后是否有"🎉 测试完成"的日志
+                const completionRegex = /🎉\s*测试完成！有效节点:\s*(\d+)\/(\d+)/;
+                const isCompleted = completionRegex.test(allLogsText);
+                const isRunning = !isCompleted && allLogsText.includes('启动高级双地区测速');
+                
+                speedTestInProgress = isRunning;
+                updateSpeedTestUI(isRunning);
+            } catch (e) {
+                console.warn('[SpeedTest] Failed to check status:', e);
+            }
+        }
+
+        function updateSpeedTestUI(isRunning) {
+            const idleSection = document.getElementById('speedtest-idle');
+            const runningSection = document.getElementById('speedtest-running');
+            const doneSection = document.getElementById('speedtest-done');
+            const btn = document.getElementById('speedtest-btn');
+            
+            if (isRunning) {
+                idleSection.classList.add('hidden');
+                runningSection.classList.remove('hidden');
+                doneSection.classList.add('hidden');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                // 开始轮询
+                monitorSpeedTest();
+            } else {
+                idleSection.classList.remove('hidden');
+                runningSection.classList.add('hidden');
+                doneSection.classList.add('hidden');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+        }
+
+        async function startSpeedTest() {
+            try {
+                const btn = document.querySelector('#speedtest-idle button');
+                if (btn) btn.disabled = true;
+                
+                const res = await fetch(`http://127.0.0.1:8000/nodes/trigger`, {
+                    method: 'POST',
+                    cache: 'no-store'
+                });
+                
+                if (!res.ok) throw new Error('Failed to start speed test');
+                
+                speedTestInProgress = true;
+                updateSpeedTestUI(true);
+                
+                showToast('双区测速已启动，请等待 5-10 分钟...');
+                
+            } catch (e) {
+                console.error('[SpeedTest] Failed to start:', e);
+                showToast('启动失败: ' + e.message);
+            }
+        }
+
+        let speedTestMonitorInterval = null;
+        async function monitorSpeedTest() {
+            // 清除旧的监控
+            if (speedTestMonitorInterval) clearInterval(speedTestMonitorInterval);
+            
+            // 立即检查一次
+            await updateSpeedTestProgress();
+            
+            // 频繁检查（每 10 秒）而不是 3 分钟
+            // 这样可以快速响应测速完成信号（通常 10-30 秒内）
+            speedTestMonitorInterval = setInterval(async () => {
+                await updateSpeedTestProgress();
+            }, 10 * 1000);
+        }
+
+        async function updateSpeedTestProgress() {
+            try {
+                const res = await fetch(`${VIPER_API_BASE}/nodes/stats`);
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                const logs = data.logs || [];
+                const allLogsText = logs.join('\n');
+                
+                // 🔥 改进：同时检查两个完成信号
+                // 1. 基础检测完成：🎉 节点检测完成！可用节点: X/Y
+                const basicCompletionRegex = /🎉\s*节点检测完成！可用节点:\s*(\d+)\/(\d+)/;
+                const basicCompleted = basicCompletionRegex.test(allLogsText);
+                
+                // 2. viper-node-store 同步完成：✅ viper-node-store 同步完成！
+                const syncCompletionRegex = /✅\s*viper-node-store 同步完成！/;
+                const syncCompleted = syncCompletionRegex.test(allLogsText);
+                
+                // 3. 检查是否有同步失败的情况
+                const syncFailedRegex = /⚠️\s*viper-node-store 同步失败/;
+                const syncFailed = syncFailedRegex.test(allLogsText);
+                
+                console.log('[Monitor] Status - basicCompleted:', basicCompleted, 'syncCompleted:', syncCompleted, 'syncFailed:', syncFailed);
+                
+                // 🔥 改进：基础检测完成 + (同步完成 OR 同步失败) 就表示整个流程完成
+                const isFullyCompleted = basicCompleted && (syncCompleted || syncFailed);
+                
+                if (isFullyCompleted) {
+                    speedTestInProgress = false;
+                    if (speedTestMonitorInterval) clearInterval(speedTestMonitorInterval);
+                    
+                    // 显示完成状态
+                    document.getElementById('speedtest-idle').classList.add('hidden');
+                    document.getElementById('speedtest-running').classList.add('hidden');
+                    document.getElementById('speedtest-done').classList.remove('hidden');
+                    
+                    if (syncCompleted) {
+                        document.getElementById('speedtest-result-msg').innerText = '✅ 双区测速完成！数据已同步到 viper-node-store，正在刷新...';
+                    } else if (syncFailed) {
+                        document.getElementById('speedtest-result-msg').innerText = '⚠️ 双区测速完成但同步失败，请检查 Supabase 配置...';
+                    }
+                    
+                    // 🔥 改进：只需 2-5 秒即可刷新（因为数据已经同步）
+                    setTimeout(() => {
+                        fetchData();
+                        toggleSpeedTestModal();
+                        showToast('✅ 测速完成！数据已更新');
+                    }, 2000);
+                } else if (basicCompleted) {
+                    // 🔥 新增：基础检测完成但等待同步的状态提示
+                    document.getElementById('speedtest-result-msg').innerText = '⏳ 基础检测完成，正在同步到 viper-node-store...';
+                    document.getElementById('speedtest-progress').innerText = '95%';
+                    document.getElementById('speedtest-bar').style.width = '95%';
+                } else {
+                    // 提取进度信息
+                    const mainlandMatch = allLogsText.match(/\[Aliyun\][\s\S]*?(\d+)\s*\/\s*(\d+)/);
+                    const overseasMatch = allLogsText.match(/\[Cloudflare\][\s\S]*?(\d+)\s*\/\s*(\d+)/);
+                    
+                    let mainlandMsg = '处理中...';
+                    let overseasMsg = '处理中...';
+                    let totalProgress = 0;
+                    
+                    if (mainlandMatch) {
+                        mainlandMsg = `${mainlandMatch[1]}/${mainlandMatch[2]}`;
+                        totalProgress = (parseInt(mainlandMatch[1]) / parseInt(mainlandMatch[2])) * 50;
+                    }
+                    
+                    if (overseasMatch) {
+                        overseasMsg = `${overseasMatch[1]}/${overseasMatch[2]}`;
+                        totalProgress += (parseInt(overseasMatch[1]) / parseInt(overseasMatch[2])) * 50;
+                    }
+                    
+                    document.getElementById('mainland-status').innerText = mainlandMsg;
+                    document.getElementById('overseas-status').innerText = overseasMsg;
+                    document.getElementById('speedtest-progress').innerText = Math.round(totalProgress) + '%';
+                    document.getElementById('speedtest-bar').style.width = totalProgress + '%';
+                }
+            } catch (e) {
+                console.warn('[Monitor] Failed to update progress:', e);
+            }
         }
 
         // ================= 🚀 [极速接入] 幽灵注入与处理逻辑 =================
@@ -1084,6 +1907,121 @@
             document.getElementById('identity-modal').classList.add('hidden');
             // 此时已经是登录状态，直接刷新数据即可，无需重载页面
             fetchData();
+        }
+
+        // ================= 同步时间显示 =================
+        
+        /**
+         * 格式化相对时间显示
+         * @param {number} minutesAgo 分钟数
+         * @returns {string} 格式化的字符串
+         */
+        function formatTimeAgo(minutesAgo) {
+            if (minutesAgo < 1) return '刚刚';
+            if (minutesAgo < 60) return `${minutesAgo}分钟前`;
+            const hoursAgo = Math.floor(minutesAgo / 60);
+            if (hoursAgo < 24) return `${hoursAgo}小时前`;
+            const daysAgo = Math.floor(hoursAgo / 24);
+            return `${daysAgo}天前`;
+        }
+
+        /**
+         * 手动触发后端轮询并刷新显示
+         * 用于用户点击刷新按钮时主动同步数据
+         */
+        async function triggerPollAndRefresh() {
+            try {
+                console.log('🔄 触发手动轮询...');
+                const response = await fetch('http://127.0.0.1:8000/api/sync/poll-now', {
+                    method: 'POST',
+                    cache: 'no-store'
+                });
+                
+                if (response.ok) {
+                    console.log('✅ 轮询请求已发送');
+                    // 等待2秒让后端处理，然后刷新显示
+                    setTimeout(() => {
+                        fetchSyncInfo();
+                    }, 2000);
+                } else {
+                    console.error('轮询请求失败:', response.status);
+                    setTimeout(() => fetchSyncInfo(), 1000);
+                }
+            } catch (error) {
+                console.error('触发轮询错误:', error);
+                // 即使轮询失败，也尝试刷新显示
+                setTimeout(() => fetchSyncInfo(), 1000);
+            }
+        }
+
+        /**
+         * 获取并显示同步信息
+         * 支持两个数据源:
+         * 1. /api/sync-info - 后端API (首选)
+         * 2. window.nodesData - 前端本地数据
+         */
+        async function fetchSyncInfo() {
+            try {
+                const timeDisplay = document.getElementById('sync-time-display');
+                const nodesCountDisplay = document.getElementById('nodes-count');
+                
+                // 优先从API获取
+                try {
+                    const response = await fetch('http://127.0.0.1:8000/api/sync-info', {
+                        method: 'GET',
+                        cache: 'no-store',
+                        timeout: 3000
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const displayText = formatTimeAgo(data.minutes_ago);
+                        
+                        if (timeDisplay) {
+                            timeDisplay.textContent = displayText;
+                        }
+                        if (nodesCountDisplay) {
+                            nodesCountDisplay.textContent = data.active_count || 0;
+                        }
+                        
+                        // 更新后，继续30秒后的下一次更新
+                        setTimeout(fetchSyncInfo, 30000);
+                        return;
+                    }
+                } catch (apiError) {
+                    console.debug('API fetch failed, using local data:', apiError.message);
+                }
+                
+                // 降级方案: 从前端本地数据获取
+                if (window.nodesData && Array.isArray(window.nodesData)) {
+                    const activeCount = window.nodesData.length;
+                    const displayText = '刚刚';
+                    
+                    if (timeDisplay) {
+                        timeDisplay.textContent = displayText;
+                    }
+                    if (nodesCountDisplay) {
+                        nodesCountDisplay.textContent = activeCount;
+                    }
+                } else {
+                    if (timeDisplay) {
+                        timeDisplay.textContent = '正在加载...';
+                    }
+                    if (nodesCountDisplay) {
+                        nodesCountDisplay.textContent = 0;
+                    }
+                }
+                
+                // 继续30秒后的下一次更新
+                setTimeout(fetchSyncInfo, 30000);
+            } catch (error) {
+                console.error('Error in fetchSyncInfo:', error);
+                const timeDisplay = document.getElementById('sync-time-display');
+                if (timeDisplay) {
+                    timeDisplay.textContent = '加载失败';
+                }
+                setTimeout(fetchSyncInfo, 30000);
+            }
         }
 
         // 4. [幽灵注入器]
