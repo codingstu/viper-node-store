@@ -732,7 +732,7 @@
                 updateAuthUI(user, isVip, vipDate);
 
                 // B. 从后端 SpiderFlow 直接获取节点数据
-                const response = await fetch(`http://127.0.0.1:8000/api/nodes?limit=500`, {
+                const response = await fetch(`/api/nodes?limit=500`, {
                     method: 'GET',
                     cache: 'no-store'
                 });
@@ -1692,7 +1692,7 @@
                 const btn = document.querySelector('#speedtest-idle button');
                 if (btn) btn.disabled = true;
                 
-                const res = await fetch(`http://127.0.0.1:8000/nodes/trigger`, {
+                const res = await fetch(`/api/sync/poll-now`, {
                     method: 'POST',
                     cache: 'no-store'
                 });
@@ -1932,7 +1932,7 @@
         async function triggerPollAndRefresh() {
             try {
                 console.log('🔄 触发手动轮询...');
-                const response = await fetch('http://127.0.0.1:8000/api/sync/poll-now', {
+                const response = await fetch('/api/sync/poll-now', {
                     method: 'POST',
                     cache: 'no-store'
                 });
@@ -1967,7 +1967,7 @@
                 
                 // 优先从API获取
                 try {
-                    const response = await fetch('http://127.0.0.1:8000/api/sync-info', {
+                    const response = await fetch('/api/sync-info', {
                         method: 'GET',
                         cache: 'no-store',
                         timeout: 3000
