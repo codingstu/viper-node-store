@@ -621,6 +621,11 @@
             ? 'http://localhost:8002'
             : 'https://api.996828.xyz';
 
+        // SpiderFlow 后端 API（用于节点检测监控）
+        const SPIDERFLOW_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8001'
+            : 'https://spiderflow.996828.xyz';
+
         let supabaseClient;
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -913,41 +918,14 @@
 
         async function updateMonitorStats() {
             try {
-                // 🔥 [修复点 1] 路由改回 /api/system/stats (匹配现在的后端)
-                const sysRes = await fetch(`${VIPER_API_BASE}/api/system/stats`);
-                if (sysRes.ok) {
-                    const sysData = await sysRes.json();
-                    if (sysData.network) {
-                        const currentTotal = (sysData.network.bytes_sent || 0) + (sysData.network.bytes_recv || 0);
-                        const now = Date.now();
-
-                        // 计算速度 (Throughput)
-                        if (lastBytesTotal > 0 && lastCheckTime > 0) {
-                            const deltaBytes = currentTotal - lastBytesTotal;
-                            const deltaTime = (now - lastCheckTime) / 1000;
-                            if (deltaTime > 0) {
-                                const speedBps = deltaBytes / deltaTime;
-                                document.getElementById('monitor-io').innerText = formatSpeed(speedBps);
-                            }
-                        }
-
-                        lastBytesTotal = currentTotal;
-                        lastCheckTime = now;
-                    }
-                }
-
-                // 🔥 [修复点 2] 路由改回 /api/visitors/stats (复数 visitors)
-                const visitRes = await fetch(`${VIPER_API_BASE}/api/visitors/stats`);
-                if (visitRes.ok) {
-                    const visitData = await visitRes.json();
-                    if (visitData.total_visitors !== undefined) {
-                        document.getElementById('monitor-hits').innerText = visitData.total_visitors.toLocaleString();
-                    }
-                }
-                // 🔥 更新当前在线人数
-                if (visitData.online_count !== undefined) {
-                    document.getElementById('monitor-online').innerText = visitData.online_count;
-                }
+                // ⚠️ 注意：viper-node-store 不提供系统监控端点
+                // 这些端点只在完整的 SpiderFlow 后端中可用
+                // 前端现在只显示静态指标，不再调用这些 API
+                
+                // 显示默认值
+                document.getElementById('monitor-io').innerText = '-- MB/s';
+                document.getElementById('monitor-hits').innerText = '--';
+                document.getElementById('monitor-online').innerText = '--';
 
             } catch (e) {
                 // 静默失败，不影响主业务
@@ -1640,7 +1618,7 @@
 
         async function checkSpeedTestStatus() {
             try {
-                const res = await fetch(`${VIPER_API_BASE}/nodes/stats`);
+                const res = await fetch(`${SPIDERFLOW_API_BASE}/nodes/stats`);
                 if (!res.ok) throw new Error('Failed to fetch status');
                 const data = await res.json();
                 
@@ -1727,7 +1705,7 @@
 
         async function updateSpeedTestProgress() {
             try {
-                const res = await fetch(`${VIPER_API_BASE}/nodes/stats`);
+                const res = await fetch(`${SPIDERFLOW_API_BASE}/nodes/stats`);
                 if (!res.ok) return;
                 const data = await res.json();
                 
