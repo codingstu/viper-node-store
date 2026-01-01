@@ -1,0 +1,50 @@
+name: Update Nodes
+
+on:
+  # 🔥 新增：监听代码提交，一旦有 push 到 main 分支，立即运行
+  push:
+    branches:
+      - main  # 如果你的主分支叫 master，请改成 master
+
+  schedule:
+    # 定时任务：每 20 分钟运行一次
+    - cron: '*/20 * * * *'
+  
+  # 手动按钮触发
+  workflow_dispatch:
+
+jobs:
+  update-nodes:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        # 🔥 记得加上 aiohttp aiohttp-socks 依赖（如果你后面要上真测速的话）
+        # 这里暂时保持和你当前的一致
+        run: pip install requests supabase
+
+      - name: Run update script
+        env:
+          SHADOW_VIPER_API: ${{ secrets.SHADOW_VIPER_API }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python update_nodes.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'Shadow Viper Bot'
+          git config --global user.email 'bot@shadowviper.com'
+          git add public/nodes.json
+          # 如果没有变化就不提交，防止报错
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🔄 Auto update nodes" && git push)
