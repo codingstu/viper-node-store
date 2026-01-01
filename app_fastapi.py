@@ -22,8 +22,9 @@
 """
 
 from fastapi import FastAPI, Query, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import logging
 import os
@@ -79,6 +80,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==================== 静态文件和根路由 ====================
+# 挂载静态文件目录，但只为 /static 路由提供文件
+import os
+static_dir = os.path.join(os.path.dirname(__file__))
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # ==================== Supabase 辅助函数 ====================
 
@@ -252,8 +259,21 @@ async def shutdown_event():
 
 @app.get("/")
 async def root():
-    """根路由 - 返回 HTML 前端"""
+    """根路由 - 返回 index.html 前端"""
+    import os
+    index_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path, media_type="text/html")
     return {"message": "viper-node-store API", "status": "running", "data_source": "Supabase"}
+
+@app.get("/index.html")
+async def index_html():
+    """直接访问 index.html"""
+    import os
+    index_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    raise HTTPException(status_code=404, detail="index.html not found")
 
 @app.get("/api/status")
 async def status():
