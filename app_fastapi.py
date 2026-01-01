@@ -33,6 +33,7 @@ import aiohttp
 import asyncio
 from typing import List, Dict, Optional
 import time
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # ==================== 配置 ====================
 
@@ -185,9 +186,26 @@ async def get_latest_sync_time() -> Optional[str]:
 
 # ==================== 启动和关闭 ====================
 
+# 全局调度器实例
+scheduler = None
+
+async def periodic_pull_from_supabase():
+    """
+    定时拉取任务：每12分钟从 Supabase 拉取一次最新的节点数据
+    这可以确保 viper-node-store 的内存缓存保持最新
+    """
+    try:
+        logger.info("📥 开始定时拉取 Supabase 节点数据...")
+        nodes = await get_supabase_nodes(limit=10000)
+        logger.info(f"✅ 定时拉取完成：获取 {len(nodes)} 个节点")
+    except Exception as e:
+        logger.warning(f"⚠️  定时拉取失败: {e}")
+
 @app.on_event("startup")
 async def startup_event():
     """应用启动时的初始化"""
+    global scheduler
+    
     logger.info("=" * 60)
     logger.info("🚀 viper-node-store 正在启动...")
     logger.info("📊 数据来源: Supabase public.nodes 表")
@@ -199,11 +217,36 @@ async def startup_event():
         logger.info("✅ Supabase 连接成功")
     except Exception as e:
         logger.warning(f"⚠️  Supabase 连接失败: {e}")
+    
+    # 启动定时任务调度器
+    try:
+        scheduler = AsyncIOScheduler()
+        
+        # 添加定时任务：每12分钟拉取一次 Supabase 数据
+        scheduler.add_job(
+            periodic_pull_from_supabase,
+            'interval',
+            minutes=12,
+            id='supabase_pull',
+            name='Supabase 定时拉取'
+        )
+        
+        scheduler.start()
+        logger.info("✅ 定时任务调度器已启动（每12分钟拉取一次 Supabase 数据）")
+    except Exception as e:
+        logger.warning(f"⚠️  启动定时任务调度器失败: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """应用关闭时的清理"""
+    global scheduler
+    
     logger.info("🛑 viper-node-store 正在关闭...")
+    
+    # 关闭调度器
+    if scheduler and scheduler.running:
+        scheduler.shutdown()
+        logger.info("✅ 定时任务调度器已关闭")
 
 # ==================== 健康检查 ====================
 
