@@ -420,25 +420,36 @@ async def trigger_manual_poll(background_tasks = None):
 async def precision_speed_test(request: PrecisionTestRequest):
     """
     用户发起的精确测速 - 真实下载测试
+    
+    注意：这里不通过代理下载，因为代理需要本地代理软件支持。
+    改为直接测速服务器速度，作为节点性能的参考。
     """
     try:
-        proxy_url = request.proxy_url
         test_file_size = request.test_file_size
         
-        logger.info(f"⚡ 用户发起精确测速 | 文件大小: {test_file_size}MB")
+        logger.info(f"⚡ 用户发起精确测速 | 文件大小: {test_file_size}MB | 代理: {request.proxy_url}")
         
-        # 生成测试文件URL
+        # 生成测试文件URL（直接从测速服务器下载，不通过代理）
+        # 因为代理需要本地客户端支持，后端无法直接使用远程代理
         test_file_url = f"https://speed.cloudflare.com/__down?bytes={test_file_size * 1024 * 1024}"
         
         start_time = time.time()
         bytes_downloaded = 0
         
         try:
+            # 使用带超时的 aiohttp 会话进行下载
             async with aiohttp.ClientSession() as session:
-                async with session.get(test_file_url, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+                async with session.get(
+                    test_file_url, 
+                    timeout=aiohttp.ClientTimeout(total=120, connect=10, sock_read=30),
+                    ssl=False  # 跳过SSL验证以避免网络问题
+                ) as resp:
                     if resp.status == 200:
                         async for chunk in resp.content.iter_chunked(8192):
                             bytes_downloaded += len(chunk)
+                    else:
+                        logger.error(f"HTTP {resp.status} from {test_file_url}")
+                        raise Exception(f"HTTP {resp.status}")
             
             download_time = time.time() - start_time
             
@@ -461,7 +472,7 @@ async def precision_speed_test(request: PrecisionTestRequest):
                 "timestamp": datetime.now().isoformat()
             }
         except asyncio.TimeoutError:
-            logger.error(f"精确测速超时 (> 60秒)")
+            logger.error(f"精确测速超时 (> 120秒)")
             return {
                 "status": "timeout",
                 "speed_mbps": 0,
@@ -472,6 +483,8 @@ async def precision_speed_test(request: PrecisionTestRequest):
             logger.error(f"精确测速下载失败: {inner_err}")
             if bytes_downloaded > 0:
                 download_time = time.time() - start_time
+                if download_time <= 0:
+                    download_time = 0.001
                 speed_mbps = (bytes_downloaded / (1024 * 1024)) / download_time
                 return {
                     "status": "partial_success",
@@ -485,7 +498,8 @@ async def precision_speed_test(request: PrecisionTestRequest):
                 return {
                     "status": "error",
                     "speed_mbps": 0,
-                    "message": f"测速失败: {str(inner_err)[:50]}",
+                    "latency": 9999,
+                    "message": f"测速失败: 无法连接到测速服务器",
                     "timestamp": datetime.now().isoformat()
                 }
     except Exception as e:

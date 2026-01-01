@@ -1352,12 +1352,22 @@
             try {
                 console.log(`开始精确测速 | 节点: ${currentTestNode.name} | 文件大小: ${fileSizeMs}MB`);
                 
+                // 构建代理URL：优先使用link，否则基于host:port生成
+                let proxyUrl = currentTestNode.link;
+                if (!proxyUrl || proxyUrl.trim() === '') {
+                    const protocol = currentTestNode.protocol || 'socks5';
+                    proxyUrl = `${protocol}://${currentTestNode.host}:${currentTestNode.port}`;
+                    console.log('✅ 自动构建代理URL:', proxyUrl);
+                }
+                
+                console.log('使用的代理URL:', proxyUrl);
+                
                 // 调用后端 API
                 const response = await fetch(`${VIPER_API_BASE}/api/nodes/precision-test`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        proxy_url: currentTestNode.link,
+                        proxy_url: proxyUrl,
                         test_file_size: fileSizeMs
                     })
                 });
@@ -1500,15 +1510,30 @@
             
             console.log('样式 - speedColor:', speedColor, 'barColor:', barColor);
             
-            // 尝试用ID找到卡片
-            const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-');
+            // 尝试用ID找到卡片 - 尽可能精确
+            const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-').replace(/:/g, '-');
             console.log('计算的节点ID:', nodeId);
             
             let card = document.getElementById(nodeId);
+            
+            // 如果找不到，尝试搜索所有卡片中包含此host:port的
+            if (!card) {
+                console.log('通过ID未找到卡片，尝试通过内容搜索...');
+                const hostPort = `${node.host}:${node.port}`;
+                const allCards = document.querySelectorAll('.glass-card');
+                for (const c of allCards) {
+                    if (c.textContent.includes(hostPort)) {
+                        card = c;
+                        console.log('✅ 通过内容匹配找到卡片');
+                        break;
+                    }
+                }
+            }
+            
             console.log('找到的卡片元素:', card);
             
             if (card) {
-                console.log('✅ 通过ID找到节点卡片:', nodeId);
+                console.log('✅ 找到节点卡片');
                 
                 // 获取text-right容器
                 const textRight = card.querySelector('div.text-right');
@@ -1527,7 +1552,7 @@
                 }
                 
                 // 更新进度条
-                const progressContainer = card.querySelector('div.overflow-hidden.h-1\\.5, div[class*="h-1.5"]');
+                const progressContainer = card.querySelector('div.h-1\\.5, div[style*="height"]');
                 console.log('进度条容器:', progressContainer);
                 
                 if (progressContainer) {
@@ -1543,8 +1568,8 @@
             } else {
                 console.error('❌ 未找到节点卡片, nodeId:', nodeId);
                 console.log('页面上的所有卡片ID:');
-                document.querySelectorAll('.glass-card[id]').forEach(c => {
-                    console.log('  -', c.id);
+                document.querySelectorAll('.glass-card').forEach((c, idx) => {
+                    console.log(`  [${idx}] id=${c.id}, content: ${c.textContent.substring(0, 50)}...`);
                 });
             }
         }
