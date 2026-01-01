@@ -320,9 +320,6 @@ async def get_sync_info():
             "needs_verification": 0,
             "error": str(e)
         }
-            "needs_verification": 0,
-            "error": str(e)
-        }
 
 
 @app.post("/api/sync/poll-now")
