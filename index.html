@@ -1329,7 +1329,7 @@
                 console.log(`开始精确测速 | 节点: ${currentTestNode.name} | 文件大小: ${fileSizeMs}MB`);
                 
                 // 调用后端 API
-                const response = await fetch('http://localhost:8002/api/nodes/precision-test', {
+                const response = await fetch(`${VIPER_API_BASE}/api/nodes/precision-test`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
