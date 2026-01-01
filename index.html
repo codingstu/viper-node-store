@@ -918,14 +918,41 @@
 
         async function updateMonitorStats() {
             try {
-                // ⚠️ 注意：viper-node-store 不提供系统监控端点
-                // 这些端点只在完整的 SpiderFlow 后端中可用
-                // 前端现在只显示静态指标，不再调用这些 API
-                
-                // 显示默认值
-                document.getElementById('monitor-io').innerText = '-- MB/s';
-                document.getElementById('monitor-hits').innerText = '--';
-                document.getElementById('monitor-online').innerText = '--';
+                // 🔥 修复：这些统计数据来自 SpiderFlow 后端，不是 viper-node-store
+                const sysRes = await fetch(`${SPIDERFLOW_API_BASE}/api/system/stats`);
+                if (sysRes.ok) {
+                    const sysData = await sysRes.json();
+                    if (sysData.network) {
+                        const currentTotal = (sysData.network.bytes_sent || 0) + (sysData.network.bytes_recv || 0);
+                        const now = Date.now();
+
+                        // 计算速度 (Throughput)
+                        if (lastBytesTotal > 0 && lastCheckTime > 0) {
+                            const deltaBytes = currentTotal - lastBytesTotal;
+                            const deltaTime = (now - lastCheckTime) / 1000;
+                            if (deltaTime > 0) {
+                                const speedBps = deltaBytes / deltaTime;
+                                document.getElementById('monitor-io').innerText = formatSpeed(speedBps);
+                            }
+                        }
+
+                        lastBytesTotal = currentTotal;
+                        lastCheckTime = now;
+                    }
+                }
+
+                // 🔥 访客统计也来自 SpiderFlow
+                const visitRes = await fetch(`${SPIDERFLOW_API_BASE}/api/visitors/stats`);
+                if (visitRes.ok) {
+                    const visitData = await visitRes.json();
+                    if (visitData.total_visitors !== undefined) {
+                        document.getElementById('monitor-hits').innerText = visitData.total_visitors.toLocaleString();
+                    }
+                    // 更新当前在线人数
+                    if (visitData.online_count !== undefined) {
+                        document.getElementById('monitor-online').innerText = visitData.online_count;
+                    }
+                }
 
             } catch (e) {
                 // 静默失败，不影响主业务
