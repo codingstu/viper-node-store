@@ -615,8 +615,8 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME';
 
         // 🔥 改进：优先使用本地 SpiderFlow 后端，然后才是 Cloudflare Tunnel
-        // 本地开发环境：localhost:8000
-        // 云端部署：https://api.996828.xyz
+        // 本地开发环境：localhost:8002 (viper-node-store FastAPI 后端必须启动)
+        // 云端部署：https://api.996828.xyz (需要在 Vercel 环境变量或 vercel.json 配置)
         const VIPER_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:8002'
             : 'https://api.996828.xyz';
