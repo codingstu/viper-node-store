@@ -779,14 +779,28 @@
                 // 解析节点内容
                 const allNodes = rawNodes.map(item => {
                     try {
-                        const nodeContent = typeof item.content === 'string' ? JSON.parse(item.content) : item.content;
+                        // 安全地解析 nodeContent
+                        let nodeContent = {};
+                        if (item.content) {
+                            if (typeof item.content === 'string') {
+                                try {
+                                    nodeContent = JSON.parse(item.content);
+                                } catch (parseErr) {
+                                    console.warn('Failed to parse item.content:', parseErr);
+                                    nodeContent = {};
+                                }
+                            } else if (typeof item.content === 'object') {
+                                nodeContent = item.content;
+                            }
+                        }
+                        
                         return {
                             // 保留原始 item 的所有字段，然后合并 nodeContent
                             ...item,
                             // 确保 nodeContent 中的字段被合并，但 item 的优先级更高（特别是 link）
-                            ...nodeContent,
+                            ...(nodeContent || {}),
                             // 再次显式保证这些关键字段使用 item 中的值
-                            link: item.link || nodeContent.subscribe_link,
+                            link: item.link || (nodeContent?.subscribe_link) || '',
                             // 添加测试数据字段（从 Supabase 直接取，或从 SpiderFlow 后端获取）
                             speed: item.speed || 0,
                             latency: item.latency || 0,
