@@ -719,6 +719,11 @@
             }
         }
 
+        // 1.5. 刷新节点列表的便捷函数
+        function fetchNodes() {
+            fetchData();
+        }
+
         // 2. 获取节点数据 (支持地区切换)
         async function fetchData() {
             const loading = document.getElementById('loading');

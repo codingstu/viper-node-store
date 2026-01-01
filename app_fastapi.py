@@ -306,14 +306,32 @@ async def get_sync_info():
         # 获取所有节点统计
         nodes = await get_supabase_nodes(limit=10000)
         
-        # 获取最后更新时间
-        last_updated_at = await get_latest_sync_time()
+        if not nodes:
+            return {
+                "last_updated_at": datetime.now().isoformat(),
+                "minutes_ago": 0,
+                "nodes_count": 0,
+                "active_count": 0,
+                "source": "supabase",
+                "sync_metadata": {
+                    "total_nodes": 0,
+                    "tested_nodes": 0,
+                    "pending_test": 0
+                }
+            }
+        
+        # 从节点中获取最新的更新时间
+        latest_time = None
+        for node in nodes:
+            if node.get("updated_at"):
+                latest_time = node.get("updated_at")
+                break
         
         # 计算分钟差异
         minutes_ago = 0
-        if last_updated_at:
+        if latest_time:
             try:
-                last_synced = datetime.fromisoformat(last_updated_at.replace('Z', '+00:00'))
+                last_synced = datetime.fromisoformat(latest_time.replace('Z', '+00:00'))
                 now = datetime.now(last_synced.tzinfo) if last_synced.tzinfo else datetime.now()
                 minutes_ago = max(0, int((now - last_synced).total_seconds() / 60))
             except Exception as e:
@@ -324,7 +342,7 @@ async def get_sync_info():
         active_count = len([n for n in nodes if n.get("alive")])
         
         return {
-            "last_updated_at": last_updated_at or datetime.now().isoformat(),
+            "last_updated_at": latest_time or datetime.now().isoformat(),
             "minutes_ago": minutes_ago,
             "nodes_count": len(nodes),
             "active_count": active_count,
