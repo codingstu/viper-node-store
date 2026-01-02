@@ -21,8 +21,8 @@
     }
   ],
   "env": {
-    "SPIDERFLOW_API_URL": "@spiderflow-api-url",
-    "SUPABASE_URL": "@supabase-url",
-    "SUPABASE_KEY": "@supabase-key"
+    "SPIDERFLOW_API_URL": "@spiderflow_api_url",
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_KEY": "@supabase_key"
   }
 }
