@@ -46,7 +46,7 @@ const handleManualRefresh = async () => {
 
   try {
     // 方法1: 通过前端 API 拉取最新数据fetch(`${VIPER_API_BASE}/
-    const response = await fetch(`${VITE_API_BASE}/nodes?limit=500`)
+    const response = await fetch(`${VIPER_API_BASE}/nodes?limit=500`)
     
     if (!response.ok) {
       throw new Error(`API 返回 ${response.status}`)
