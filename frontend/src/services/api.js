@@ -1,11 +1,11 @@
 /**
  * API 服务层 - 所有与后端的通信都在这里
- * 数据来源：viper-node-store FastAPI 后端 (localhost:8002)
+ * 数据来源：viper-node-store FastAPI 后端
  */
 
 import { useAuthStore } from '../stores/authStore'
 
-const VIPER_API_BASE = 'http://localhost:8002'
+const VIPER_API_BASE = '/api'  // 相对路径，自动指向当前域名的 /api
 const SPIDERFLOW_API_BASE = '/api/proxy'  // 通过 viper-node-store 代理 SpiderFlow 请求
 
 /**
@@ -36,7 +36,7 @@ export const nodeApi = {
         headers['X-User-ID'] = userId
       }
       
-      const response = await fetch(`${VIPER_API_BASE}/api/nodes`, { headers })
+      const response = await fetch(`${VIPER_API_BASE}/nodes`, { headers })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       let nodes = await response.json()
       
@@ -87,7 +87,7 @@ export const nodeApi = {
    */
   async fetchSyncInfo() {
     try {
-      const response = await fetch(`${VIPER_API_BASE}/api/sync-info`)
+      const response = await fetch(`${VIPER_API_BASE}/sync-info`)
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       return await response.json()
     } catch (error) {
@@ -109,7 +109,7 @@ export const nodeApi = {
         console.log('✅ 自动构建代理URL:', proxyUrl)
       }
 
-      const response = await fetch(`${VIPER_API_BASE}/api/nodes/precision-test`, {
+      const response = await fetch(`${VIPER_API_BASE}/nodes/precision-test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -135,7 +135,7 @@ export const nodeApi = {
    */
   async latencyTest(proxyUrl) {
     try {
-      const response = await fetch(`${VIPER_API_BASE}/api/nodes/latency-test`, {
+      const response = await fetch(`${VIPER_API_BASE}/nodes/latency-test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proxy_url: proxyUrl })
