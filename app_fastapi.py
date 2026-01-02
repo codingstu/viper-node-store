@@ -28,13 +28,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import aiohttp
 import asyncio
 from typing import List, Dict, Optional
 import time
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import supabase
 
 # ==================== 配置 ====================
 
@@ -141,7 +142,7 @@ async def get_supabase_nodes(
                                 "port": node_content.get("port", 0),
                                 "name": node_content.get("name", f"{node_content.get('host')}:{node_content.get('port')}"),
                                 "country": node_content.get("country", "UNK"),
-                                "link": node_content.get("link", ""),
+                                "link": row.get("link", "") or node_content.get("link", ""),  # 优先从表字段读取，备用从 content 读取
                                 "is_free": row.get("is_free", False),
                                 "speed": row.get("speed", 0),
                                 "latency": row.get("latency", 9999),
@@ -556,6 +557,146 @@ async def latency_test(request: LatencyTestRequest):
             "latency": 9999,
             "message": f"API 错误: {str(e)}",
             "timestamp": datetime.now().isoformat()
+        }
+
+# ==================== 激活码兑换 API ====================
+
+class RedeemCodeRequest(BaseModel):
+    """激活码兑换请求"""
+    code: str
+    user_id: str  # Supabase 用户 ID
+
+@app.post("/api/auth/redeem-code")
+async def redeem_code(request: RedeemCodeRequest):
+    """
+    兑换激活码升级到 VIP
+    
+    激活码格式：VIPX-XXXX-XXXX（示例）
+    激活码有效期：根据激活码配置决定
+    """
+    try:
+        code = request.code.strip().upper()
+        user_id = request.user_id
+        
+        if not code or not user_id:
+            return {
+                "status": "error",
+                "message": "激活码和用户ID不能为空"
+            }
+        
+        logger.info(f"🔑 兑换激活码: code={code}, user_id={user_id}")
+        
+        # 初始化 Supabase 客户端
+        supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+        
+        # 查询 activation_codes 表
+        try:
+            codes_result = supabase_client.table("activation_codes").select("*").eq("code", code).execute()
+        except Exception as e:
+            logger.error(f"❌ 查询激活码表失败: {e}")
+            return {
+                "status": "error",
+                "message": "系统错误：无法查询激活码"
+            }
+        
+        if not codes_result.data:
+            logger.warning(f"❌ 激活码不存在: {code}")
+            return {
+                "status": "error",
+                "message": "激活码不存在或已过期"
+            }
+        
+        code_record = codes_result.data[0]
+        
+        # 检查激活码是否已被使用
+        if code_record.get("used"):
+            logger.warning(f"❌ 激活码已被使用: {code}")
+            return {
+                "status": "error",
+                "message": "该激活码已被兑换"
+            }
+        
+        # 检查激活码是否过期
+        if code_record.get("expires_at"):
+            try:
+                expires_at = datetime.fromisoformat(code_record["expires_at"].replace("Z", "+00:00"))
+                if expires_at < datetime.now(expires_at.tzinfo):
+                    logger.warning(f"❌ 激活码已过期: {code}")
+                    return {
+                        "status": "error",
+                        "message": "激活码已过期"
+                    }
+            except:
+                pass  # 如果时间解析失败，继续处理
+        
+        # 获取 VIP 时长（天数）
+        vip_days = code_record.get("vip_days", 30)  # 默认 30 天
+        
+        # 计算 VIP 过期时间
+        vip_until = datetime.utcnow() + timedelta(days=vip_days)
+        
+        # 更新用户的 vip_until 字段
+        # 使用 upsert 确保即使字段不存在也能成功（Supabase 会自动添加）
+        try:
+            # 首先尝试直接更新
+            profiles_result = supabase_client.table("profiles").update({
+                "vip_until": vip_until.isoformat()
+            }).eq("id", user_id).execute()
+            
+            # 检查是否有更新
+            if profiles_result.data:
+                logger.info(f"✅ 用户 VIP 状态已更新: {user_id}")
+            else:
+                # 如果没有返回数据，可能是因为用户不存在或 RLS 限制
+                # 尝试插入或更新（upsert）
+                logger.warning(f"⚠️ 直接更新失败，尝试 upsert: {user_id}")
+                
+                # 使用 upsert：如果用户不存在，创建；如果存在，更新
+                upsert_result = supabase_client.table("profiles").upsert({
+                    "id": user_id,
+                    "vip_until": vip_until.isoformat()
+                }).execute()
+                
+                if not upsert_result.data:
+                    logger.error(f"❌ upsert 也失败了: {user_id}")
+                    return {
+                        "status": "error",
+                        "message": "更新 VIP 状态失败，请稍后重试"
+                    }
+                
+                logger.info(f"✅ 用户 VIP 状态已通过 upsert 更新: {user_id}")
+                
+        except Exception as e:
+            logger.error(f"❌ 更新用户 VIP 状态异常: {e}")
+            return {
+                "status": "error",
+                "message": f"更新 VIP 状态失败: {str(e)}"
+            }
+        
+        # 标记激活码为已使用
+        try:
+            supabase_client.table("activation_codes").update({
+                "used": True,
+                "used_by": user_id,
+                "used_at": datetime.utcnow().isoformat()
+            }).eq("code", code).execute()
+        except Exception as e:
+            logger.warning(f"⚠️ 标记激活码失败（但用户已升级）: {e}")
+            # 不中断流程，因为用户已经升级了
+        
+        logger.info(f"✅ 激活码兑换成功: {code}, VIP 至 {vip_until.isoformat()}")
+        
+        return {
+            "status": "success",
+            "message": f"恭喜！您已升级为 VIP 用户，有效期至 {vip_until.strftime('%Y-%m-%d')}",
+            "vip_until": vip_until.isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 激活码兑换异常: {e}")
+        return {
+            "status": "error",
+            "message": f"兑换失败: {str(e)}"
         }
 
 # ==================== 主程序 ====================

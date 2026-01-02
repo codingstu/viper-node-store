@@ -7,7 +7,7 @@ from urllib.parse import urlparse, parse_qs
 import json
 import urllib.request
 
-SUPABASE_URL = 'https://hnlkwtkxbqiakeyienok.supabase.co'
+SUPABASE_URL = 'https://RLS.supabase.co'
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME'
 
 class ProxyHandler(SimpleHTTPRequestHandler):

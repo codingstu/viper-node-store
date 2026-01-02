@@ -427,6 +427,7 @@ def save_to_supabase(nodes: List[Dict]):
             data.append({
                 "id": node_id,
                 "content": node,
+                "link": node.get("link", ""),  # 添加 link 字段直接到表中
                 "is_free": i < 15,  # 前15个免费
                 # 🟢 修复: 强制转整数，解决 "20.0" 报错
                 "speed": int(float(node.get("speed", 0))),

@@ -449,3 +449,348 @@ SUPABASE_KEY=eyJhbGci...
 **最后更新**: 2026-01-01
 **状态**: ✅ 所有问题已解决
 **验证**: 代码审查通过，提交到 dev 分支
+
+---
+
+## 前端重写：从纯HTML到Vue3（2026-01-02）
+
+### 背景
+原始纯HTML前端存在三个关键问题：
+1. **空链接问题**：节点链接为空时，仍显示 COPY/QR CODE 按钮
+2. **空QR码问题**：链接为空时生成空白QR码
+3. **实时性问题**：精准测速后，数据不刷新UI
+
+### 解决方案：完全重写为Vue3 + Vite
+
+#### 项目结构
+```
+viper-node-store-vue/
+├── src/
+│   ├── main.js                 # 应用入口，Pinia初始化
+│   ├── App.vue                 # 根组件，主界面布局
+│   ├── style.css               # 全局样式（Tailwind）
+│   ├── components/
+│   │   ├── NodeCard.vue        # 单个节点卡片组件
+│   │   ├── QRCodeModal.vue     # QR码弹窗，链接验证
+│   │   └── PrecisionTestModal.vue  # 测速弹窗
+│   ├── services/
+│   │   └── api.js              # 集中式API层，数据规范化
+│   └── stores/
+│       └── nodeStore.js        # Pinia状态管理
+├── tailwind.config.js
+├── postcss.config.cjs
+├── vite.config.js
+└── package.json
+```
+
+#### 核心改进
+
+##### 1. 智能链接验证（解决问题1、2）
+
+**NodeCard.vue**:
+```javascript
+// 只有链接有效时才显示按钮
+const showActions = computed(() => {
+  return link.value && link.value.trim() !== '';
+});
+
+// v-if/v-else 条件渲染
+<button v-if="showActions" @click="showQRCode">QR CODE</button>
+<div v-else class="text-gray-400">🔗 No Link</div>
+```
+
+**QRCodeModal.vue**:
+```javascript
+// watch监听prop，链接有效才生成QR码
+watch(() => [props.show, props.node], () => {
+  if (props.show && link.value?.trim()) {
+    generateQRCode();  // ✅ 只生成有效QR码
+  }
+});
+```
+
+##### 2. 响应式数据更新（解决问题3）
+
+**PrecisionTestModal.vue**:
+```javascript
+// 调用API测速
+const testResult = await nodeStore.precisionTest(node, fileSize);
+
+// 直接更新状态存储
+nodeStore.updateNodeSpeed(node.id, testResult.speed);
+// Vue 自动响应式更新 NodeCard 显示的速度
+```
+
+**nodeStore.js** (Pinia):
+```javascript
+// 状态管理
+state: () => ({
+  nodes: [],
+}),
+
+// 更新方法触发响应式
+updateNodeSpeed(nodeId, speed) {
+  const node = this.nodes.find(n => n.id === nodeId);
+  if (node) node.speed = speed;  // ✅ Vue自动重新渲染
+}
+```
+
+##### 3. 数据规范化（api.js）
+
+```javascript
+// 后端返回格式可能不一致
+// api.js 统一转换为标准格式
+export async function fetchNodes() {
+  const response = await fetch('/api/nodes');
+  const data = await response.json();
+  
+  // 规范化到统一的数据结构
+  return data.map(node => ({
+    id: node.id,
+    protocol: node.protocol,
+    host: node.host,
+    port: node.port,
+    link: node.link || '',        // ✅ 处理空链接
+    speed: node.speed || 0,
+    latency: node.latency || 0,
+    country: node.country || 'Unknown',
+    is_free: node.is_free ?? true,
+  }));
+}
+```
+
+#### 技术栈
+
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| Vue | 3.x | 前端框架（Composition API） |
+| Vite | 7.3.0 | 构建工具 |
+| Pinia | 3.0.4 | 状态管理 |
+| Tailwind CSS | 3.x | 样式框架 |
+| easyqrcodejs | 4.6.2 | QR码生成 |
+
+#### 安装和运行
+
+```bash
+# 安装依赖
+npm install
+
+# 开发服务器（Vite，热重载）
+npm run dev
+# → http://localhost:5173/
+
+# 生产构建
+npm run build
+
+# 预览生产构建
+npm run preview
+```
+
+#### 配置要点
+
+**tailwind.config.js**:
+- 内容扫描：`"./src/**/*.{vue,js,ts,jsx,tsx}"`
+- 确保Tailwind类被识别
+
+**postcss.config.cjs** (关键！):
+```javascript
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+```
+⚠️ **必须是 .cjs 格式**（CommonJS），避免 Vite ESM 冲突
+
+#### 组件通信流程
+
+```
+App.vue (主界面)
+  ├─ nodeStore (状态中心)
+  │  ├─ nodes[]           # 所有节点
+  │  ├─ displayedNodes    # 搜索/过滤后的节点
+  │  └─ updateNodeSpeed() # 更新速度
+  │
+  ├─ NodeCard.vue (节点卡片) ×50
+  │  ├─ 显示node属性
+  │  ├─ @click:showQRCode  → emit → App.vue
+  │  └─ @click:showTest    → emit → App.vue
+  │
+  ├─ QRCodeModal.vue (QR码弹窗)
+  │  ├─ v-if="props.show"
+  │  ├─ v-if="link.trim()"  ✅ 链接有效才显示
+  │  └─ generateQRCode()     ✅ 只生成有效QR码
+  │
+  └─ PrecisionTestModal.vue (测速弹窗)
+     ├─ 调用 nodeStore.precisionTest()
+     ├─ 接收测速结果
+     └─ nodeStore.updateNodeSpeed()  ✅ 自动更新UI
+```
+
+#### 问题解决验证
+
+| 问题 | 原因 | 解决方案 | 状态 |
+|------|------|--------|------|
+| 空链接显示按钮 | 纯HTML无条件渲染 | NodeCard v-if/showActions | ✅ |
+| 空QR码 | 未验证链接 | QRCodeModal watch监听 | ✅ |
+| 测速不更新UI | 无状态管理 | Pinia updateNodeSpeed() | ✅ |
+
+#### CSS和样式
+
+- **框架**：Tailwind CSS v3
+- **预处理**：PostCSS + autoprefixer
+- **深色主题**：内置深灰色背景 + 蓝色渐变
+- **响应式**：移动端友好的网格布局
+
+示例 App.vue 样式：
+```vue
+<div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900">
+  <!-- 深灰色到蓝色渐变背景 -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+    <!-- 响应式网格：1列(移动) → 2列(平板) → 3列(桌面) -->
+  </div>
+</div>
+```
+
+#### 部署
+
+**Vercel 部署配置** (vercel.json):
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
+}
+```
+
+推送到 main 分支后，Vercel 自动构建并部署。
+
+---
+
+### 开发进度
+
+- [x] 项目初始化（Vite + Vue3）
+- [x] 组件架构设计
+- [x] NodeCard 组件（链接验证）
+- [x] QRCodeModal 组件（条件生成QR）
+- [x] PrecisionTestModal 组件（测速结果）
+- [x] Pinia 状态管理
+- [x] API 服务层（数据规范化）
+- [x] Tailwind CSS 配置
+- [x] 搜索和过滤功能
+- [x] 深色主题样式
+- [x] 热重载开发环境（Vite）
+
+### 关键文件修改
+
+```bash
+# 新增文件
+viper-node-store-vue/src/main.js
+viper-node-store-vue/src/App.vue
+viper-node-store-vue/src/style.css
+viper-node-store-vue/src/components/NodeCard.vue
+viper-node-store-vue/src/components/QRCodeModal.vue
+viper-node-store-vue/src/components/PrecisionTestModal.vue
+viper-node-store-vue/src/services/api.js
+viper-node-store-vue/src/stores/nodeStore.js
+viper-node-store-vue/tailwind.config.js
+viper-node-store-vue/postcss.config.cjs
+viper-node-store-vue/vite.config.js
+viper-node-store-vue/package.json
+
+# 配置文件
+viper-node-store-vue/.gitignore
+viper-node-store-vue/index.html
+```
+
+### 测试验证
+
+```bash
+# 1. 启动开发服务器
+cd viper-node-store-vue && npm run dev
+
+# 2. 打开浏览器
+# → http://localhost:5173/
+
+# 3. 验证功能
+# ✅ 页面加载，显示节点列表
+# ✅ 点击有效链接的节点 → QR CODE 按钮可用
+# ✅ 点击无链接的节点 → QR CODE 按钮禁用
+# ✅ QR CODE 弹窗显示有效的二维码
+# ✅ 点击精准测速 → 进度条显示，结果更新
+# ✅ 搜索和过滤功能正常
+```
+
+---
+
+**完成日期**: 2026-01-02  
+**验证状态**: ✅ 本地开发环境正常运行，所有功能测试通过  
+**部署建议**: 测试无误后推送到 main 分支，Vercel 自动部署
+
+---
+
+## 前端重构：功能完善计划（2026-01-02 进行中）
+
+### 已完成
+- ✅ 项目迁移至 viper-node-store/frontend
+- ✅ 修复 Tailwind CSS 配置（v3.4）
+- ✅ **修复刷新间隔：30秒 → 12分钟（720000ms）**
+  - 现在与后端 Supabase 拉取同步（每12分钟一次）
+- ✅ 页面样式正确显示
+- ✅ 节点列表加载和显示
+- ✅ QR码生成和复制
+- ✅ 精准测速功能
+
+### 进行中（高优先级）
+- 🔄 登录/注册功能（Supabase Auth）
+  - 文件：需要创建 `src/components/AuthModal.vue`
+  - Supabase 配置已在后端 app_fastapi.py
+  - 需要在前端集成 @supabase/supabase-js
+
+- 🔄 VIP 状态显示和切换
+  - 从 Supabase Auth 读取用户身份
+  - 显示 VIP 徽章和过期时间
+  - VIP 和普通节点的不同显示
+
+- 🔄 VIP 和非 VIP 节点区分显示
+  - 在 NodeCard 中根据 VIP 状态显示不同内容
+  - VIP 节点显示额外功能
+  - 非 VIP 节点显示限制提示
+
+### 暂停（未来功能，不在当前迭代）
+- ⏸️ **区域切换功能**（大陆/海外）
+  - 原始功能在 index.html 中的 switchRegion()
+  - 需要后端支持两套数据源
+  - **暂时不实现，以后再做**
+
+- ⏸️ CN LINE 按钮
+  - 属于区域切换的一部分
+
+- ⏸️ Latency Test（延迟测试）
+  - 原始功能在 index.html 中的 startLatencyTest()
+  - 补充功能，优先级较低
+
+### 修复清单（当前迭代）
+- [x] 刷新间隔：30秒 → 12分钟
+- [ ] Supabase Auth 集成
+- [ ] 登录/注册 UI（AuthModal 组件）
+- [ ] VIP 状态读取和显示
+- [ ] VIP/普通节点 UI 区分
+
+### 测试步骤（修复后）
+```bash
+# 确认刷新间隔是 12 分钟而不是 30 秒
+# 浏览器控制台应该每 12 分钟输出一次：
+# "🚀 应用启动，初始化数据..."
+# 或后续更新的时间戳
+
+# 数据应该与后端 Supabase 拉取同步
+# 后端日志每 12 分钟：
+# "Supabase 定时拉取完成"
+```
+
+---
+
+**最后更新**: 2026-01-02 02:05  
+**状态**: 🔧 修复进行中  
+**下一步**: 添加登录/VIP 功能
