@@ -14,7 +14,7 @@
     {
       "src": "/api/(.*)",
       "dest": "/api/index.py"
-    },
+    }
     
   ]
 }
