@@ -46,10 +46,9 @@ export const useNodeStore = defineStore('nodes', () => {
       result = result.filter(node => node.country === selectedCountry.value)
     }
 
-    // VIP 限制：非VIP用户只能看20个节点
-    if (!authStore.isVip) {
-      result = result.slice(0, 20)
-    }
+    // 注意：VIP 限制现在在后端实现
+    // 后端根据用户VIP状态返回相应数量的节点
+    // 非VIP用户最多50个，VIP用户最多500个
 
     return result
   })

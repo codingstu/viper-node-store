@@ -3,8 +3,22 @@
  * 数据来源：viper-node-store FastAPI 后端 (localhost:8002)
  */
 
+import { useAuthStore } from '../stores/authStore'
+
 const VIPER_API_BASE = 'http://localhost:8002'
 const SPIDERFLOW_API_BASE = 'http://localhost:8001'
+
+/**
+ * 获取当前用户 ID（从 authStore）
+ */
+function getUserId() {
+  try {
+    const authStore = useAuthStore()
+    return authStore.currentUser?.id || null
+  } catch (e) {
+    return null
+  }
+}
 
 export const nodeApi = {
   /**
@@ -12,7 +26,17 @@ export const nodeApi = {
    */
   async fetchNodes() {
     try {
-      const response = await fetch(`${VIPER_API_BASE}/api/nodes`)
+      const userId = getUserId()
+      const headers = {
+        'Content-Type': 'application/json'
+      }
+      
+      // 如果获取到了用户ID，在header中发送
+      if (userId) {
+        headers['X-User-ID'] = userId
+      }
+      
+      const response = await fetch(`${VIPER_API_BASE}/api/nodes`, { headers })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       let nodes = await response.json()
       

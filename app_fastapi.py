@@ -21,7 +21,7 @@
 - aiohttp: 异步HTTP请求
 """
 
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Header
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -29,6 +29,7 @@ from pydantic import BaseModel
 import logging
 import os
 from datetime import datetime, timedelta
+from typing import Optional
 import json
 import aiohttp
 import asyncio
@@ -192,6 +193,37 @@ async def get_latest_sync_time() -> Optional[str]:
         logger.warning(f"⚠️  获取最后更新时间失败: {e}")
         return None
 
+async def check_user_vip_status(user_id: Optional[str]) -> bool:
+    """
+    检查用户是否是 VIP
+    
+    Args:
+        user_id: Supabase 用户 ID
+    
+    Returns:
+        True 如果是 VIP，False 如果不是或用户不存在
+    """
+    if not user_id:
+        return False
+    
+    try:
+        supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+        result = supabase_client.table("profiles").select("vip_until").eq("id", user_id).execute()
+        
+        if result.data and len(result.data) > 0:
+            vip_until = result.data[0].get("vip_until")
+            if vip_until:
+                try:
+                    vip_until_dt = datetime.fromisoformat(vip_until.replace("Z", "+00:00"))
+                    now = datetime.now(vip_until_dt.tzinfo) if vip_until_dt.tzinfo else datetime.now()
+                    return vip_until_dt > now
+                except:
+                    return False
+        return False
+    except Exception as e:
+        logger.warning(f"⚠️  检查 VIP 状态失败: {e}")
+        return False
+
 # ==================== 启动和关闭 ====================
 
 # 全局调度器实例
@@ -290,19 +322,41 @@ async def status():
 
 @app.get("/api/nodes")
 async def get_nodes(
-    limit: int = Query(50, ge=1, le=500),
+    limit: int = Query(None, ge=1, le=500),
     show_free: bool = Query(True),
-    show_china: bool = Query(True)
+    show_china: bool = Query(True),
+    user_id: Optional[str] = Header(None, alias="X-User-ID")
 ):
     """
     获取节点列表（从 Supabase）
     
+    安全特性：
+    - VIP 用户可获取最多 500 个节点
+    - 非 VIP 用户最多获取 50 个节点
+    - 限制在服务器端实现，无法被前端绕过
+    
     Parameters:
-    - limit: 返回节点数量限制（1-500）
+    - limit: 返回节点数量限制（1-500，可选）
     - show_free: 是否显示免费节点
     - show_china: 是否显示中国节点
+    - X-User-ID: 用户ID（HTTP header）
     """
     try:
+        # 检查用户 VIP 状态
+        is_vip = await check_user_vip_status(user_id)
+        
+        # 确定返回的节点数量
+        if limit is None:
+            # 如果没有指定 limit，使用默认值
+            default_limit = 500 if is_vip else 50
+            limit = default_limit
+        else:
+            # 如果指定了 limit，非 VIP 用户最多 50 个
+            if not is_vip and limit > 50:
+                limit = 50
+        
+        logger.info(f"📋 获取节点: VIP={is_vip}, limit={limit}, user_id={user_id or '(anonymous)'}")
+        
         nodes = await get_supabase_nodes(limit=limit, show_free=show_free, show_china=show_china)
         return nodes
     except Exception as e:
