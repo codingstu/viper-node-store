@@ -764,7 +764,7 @@ async def proxy_nodes(
     """代理 SpiderFlow 的 /api/nodes 请求"""
     try:
         async with aiohttp.ClientSession() as session:
-            url = "http://api.996828.xyz/api/nodes"
+            url = f"{SPIDERFLOW_API_URL}/api/nodes"
             params = {
                 "limit": limit,
                 "show_socks_http": show_socks_http,
@@ -781,7 +781,7 @@ async def proxy_system_stats():
     """代理 SpiderFlow 的 /api/system/stats 请求"""
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get("http://api.996828.xyz/api/system/stats", timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            async with session.get(f"{SPIDERFLOW_API_URL}/api/system/stats", timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 return await resp.json()
     except Exception as e:
         logger.error(f"❌ 代理 SpiderFlow 系统统计失败: {e}")
@@ -792,7 +792,7 @@ async def proxy_nodes_stats():
     """代理 SpiderFlow 的 /nodes/stats 请求"""
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get("http://api.996828.xyz/nodes/stats", timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            async with session.get(f"{SPIDERFLOW_API_URL}/nodes/stats", timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 return await resp.json()
     except Exception as e:
         logger.error(f"❌ 代理 SpiderFlow 节点统计失败: {e}")
