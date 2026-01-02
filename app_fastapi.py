@@ -753,6 +753,53 @@ async def redeem_code(request: RedeemCodeRequest):
             "message": f"兑换失败: {str(e)}"
         }
 
+# ==================== SpiderFlow API 代理 ====================
+
+import httpx
+
+@app.get("/api/proxy/nodes")
+async def proxy_nodes(
+    limit: int = Query(500, ge=1, le=500),
+    show_socks_http: bool = Query(False),
+    show_china_nodes: bool = Query(False)
+):
+    """代理 SpiderFlow 的 /api/nodes 请求"""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            url = "http://localhost:8001/api/nodes"
+            params = {
+                "limit": limit,
+                "show_socks_http": show_socks_http,
+                "show_china_nodes": show_china_nodes
+            }
+            response = await client.get(url, params=params)
+            return response.json()
+    except Exception as e:
+        logger.error(f"❌ 代理 SpiderFlow 节点数据失败: {e}")
+        raise HTTPException(status_code=502, detail=f"SpiderFlow 服务不可用: {str(e)}")
+
+@app.get("/api/proxy/system/stats")
+async def proxy_system_stats():
+    """代理 SpiderFlow 的 /api/system/stats 请求"""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get("http://localhost:8001/api/system/stats")
+            return response.json()
+    except Exception as e:
+        logger.error(f"❌ 代理 SpiderFlow 系统统计失败: {e}")
+        raise HTTPException(status_code=502, detail=f"SpiderFlow 服务不可用: {str(e)}")
+
+@app.get("/api/proxy/nodes/stats")
+async def proxy_nodes_stats():
+    """代理 SpiderFlow 的 /nodes/stats 请求"""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get("http://localhost:8001/nodes/stats")
+            return response.json()
+    except Exception as e:
+        logger.error(f"❌ 代理 SpiderFlow 节点统计失败: {e}")
+        raise HTTPException(status_code=502, detail=f"SpiderFlow 服务不可用: {str(e)}")
+
 # ==================== 主程序 ====================
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@
 import { useAuthStore } from '../stores/authStore'
 
 const VIPER_API_BASE = 'http://localhost:8002'
-const SPIDERFLOW_API_BASE = 'http://localhost:8001'
+const SPIDERFLOW_API_BASE = '/api/proxy'  // 通过 viper-node-store 代理 SpiderFlow 请求
 
 /**
  * 获取当前用户 ID（从 authStore）
