@@ -249,8 +249,8 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       // 调用后端 API 处理激活码
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
-      const response = await fetch(`${apiUrl}/api/auth/redeem-code`, {
+      const apiUrl = import.meta.env.VITE_API_BASE || '/api'
+      const response = await fetch(`${apiUrl}/auth/redeem-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
