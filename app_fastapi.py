@@ -755,8 +755,6 @@ async def redeem_code(request: RedeemCodeRequest):
 
 # ==================== SpiderFlow API 代理 ====================
 
-import httpx
-
 @app.get("/api/proxy/nodes")
 async def proxy_nodes(
     limit: int = Query(500, ge=1, le=500),
@@ -765,15 +763,15 @@ async def proxy_nodes(
 ):
     """代理 SpiderFlow 的 /api/nodes 请求"""
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with aiohttp.ClientSession() as session:
             url = "http://localhost:8001/api/nodes"
             params = {
                 "limit": limit,
                 "show_socks_http": show_socks_http,
                 "show_china_nodes": show_china_nodes
             }
-            response = await client.get(url, params=params)
-            return response.json()
+            async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                return await resp.json()
     except Exception as e:
         logger.error(f"❌ 代理 SpiderFlow 节点数据失败: {e}")
         raise HTTPException(status_code=502, detail=f"SpiderFlow 服务不可用: {str(e)}")
@@ -782,9 +780,9 @@ async def proxy_nodes(
 async def proxy_system_stats():
     """代理 SpiderFlow 的 /api/system/stats 请求"""
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            response = await client.get("http://localhost:8001/api/system/stats")
-            return response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get("http://localhost:8001/api/system/stats", timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                return await resp.json()
     except Exception as e:
         logger.error(f"❌ 代理 SpiderFlow 系统统计失败: {e}")
         raise HTTPException(status_code=502, detail=f"SpiderFlow 服务不可用: {str(e)}")
@@ -793,9 +791,9 @@ async def proxy_system_stats():
 async def proxy_nodes_stats():
     """代理 SpiderFlow 的 /nodes/stats 请求"""
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            response = await client.get("http://localhost:8001/nodes/stats")
-            return response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get("http://localhost:8001/nodes/stats", timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                return await resp.json()
     except Exception as e:
         logger.error(f"❌ 代理 SpiderFlow 节点统计失败: {e}")
         raise HTTPException(status_code=502, detail=f"SpiderFlow 服务不可用: {str(e)}")
