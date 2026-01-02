@@ -332,7 +332,7 @@ async def get_nodes(
     
     安全特性：
     - VIP 用户可获取最多 500 个节点
-    - 非 VIP 用户最多获取 50 个节点
+    - 非 VIP 用户最多获取 20 个节点
     - 限制在服务器端实现，无法被前端绕过
     
     Parameters:
@@ -348,12 +348,12 @@ async def get_nodes(
         # 确定返回的节点数量
         if limit is None:
             # 如果没有指定 limit，使用默认值
-            default_limit = 500 if is_vip else 50
+            default_limit = 500 if is_vip else 20
             limit = default_limit
         else:
-            # 如果指定了 limit，非 VIP 用户最多 50 个
-            if not is_vip and limit > 50:
-                limit = 50
+            # 如果指定了 limit，非 VIP 用户最多 20 个
+            if not is_vip and limit > 20:
+                limit = 20
         
         logger.info(f"📋 获取节点: VIP={is_vip}, limit={limit}, user_id={user_id or '(anonymous)'}")
         
