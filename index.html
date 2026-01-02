@@ -619,12 +619,12 @@
         // 云端部署：https://api.996828.xyz (需要在 Vercel 环境变量或 vercel.json 配置)
         const VIPER_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:8002'
-            : 'https://api.996828.xyz';
+            : '/api';
 
-        // SpiderFlow 后端 API（用于节点检测监控）
-        const SPIDERFLOW_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:8001'
-            : 'https://spiderflow.996828.xyz';
+        // SpiderFlow 后端 API（通过 viper-node-store 的代理访问）
+        // 本地开发：代理到 localhost:8001
+        // 云端部署：代理通过 /api/proxy 访问线上的 SpiderFlow
+        const SPIDERFLOW_API_BASE = '/api/proxy';
 
         let supabaseClient;
         if (typeof supabase !== 'undefined') {
