@@ -222,28 +222,20 @@ async function startHealthCheck() {
   currentStatus.value = '正在获取节点列表...'
 
   try {
-    // 获取所有节点
-    const nodes = nodeStore.allNodesBackup
-    progress.value.total = nodes.length
-
-    if (nodes.length === 0) {
-      currentStatus.value = '没有节点需要检测'
-      isRunning.value = false
-      return
-    }
-
     currentStatus.value = '正在发起健康检测...'
 
     // 调用后端 API 进行批量检测
     const response = await healthCheckApi.checkAll()
 
-    if (response.success) {
+    if (response.status === "success" && response.data) {
+      const data = response.data
+      
       // 处理结果
       result.value = {
-        total: response.total || nodes.length,
-        online: response.online || 0,
-        suspect: response.suspect || 0,
-        offline: response.offline || 0
+        total: data.total || 0,
+        online: data.online || 0,
+        suspect: data.suspect || 0,
+        offline: data.offline || 0
       }
 
       // 更新进度
@@ -256,16 +248,20 @@ async function startHealthCheck() {
       }
 
       // 获取问题节点列表
-      if (response.problem_nodes) {
-        problemNodes.value = response.problem_nodes
+      if (data.problem_nodes) {
+        problemNodes.value = data.problem_nodes
       }
 
+      currentStatus.value = '正在刷新节点列表...'
+      
       // 刷新节点列表以获取最新状态
       await nodeStore.refreshNodes()
       
+      currentStatus.value = '✅ 检测完成'
+      
       emit('complete', result.value)
     } else {
-      currentStatus.value = `检测失败: ${response.error || '未知错误'}`
+      currentStatus.value = `检测失败: ${response.message || '未知错误'}`
     }
   } catch (error) {
     console.error('健康检测失败:', error)

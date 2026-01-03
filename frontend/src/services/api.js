@@ -169,12 +169,26 @@ export const healthCheckApi = {
       })
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      return await response.json()
+      const result = await response.json()
+      
+      // 统一返回格式
+      if (result.status === 'success' && result.data) {
+        return {
+          status: 'success',
+          data: result.data,
+          message: '检测成功'
+        }
+      } else {
+        return {
+          status: 'error',
+          message: result.message || '检测失败'
+        }
+      }
     } catch (error) {
       console.error('❌ 健康检测失败:', error)
       return {
-        success: false,
-        error: error.message
+        status: 'error',
+        message: error.message
       }
     }
   },
