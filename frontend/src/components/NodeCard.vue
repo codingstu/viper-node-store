@@ -1,13 +1,31 @@
 <template>
-  <div class="glass-card group p-4 rounded-xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur border border-white/20 hover:border-white/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
+  <div :class="[
+    'glass-card group p-4 rounded-xl bg-gradient-to-br backdrop-blur border transition-all duration-300 hover:shadow-lg',
+    nodeStatusClass
+  ]">
     <!-- 显示模式：正常卡片或 QR 码卡片 -->
     <div v-if="!showingQRCode">
-      <!-- 头部：名称和协议 -->
+      <!-- 头部：名称和协议 + 状态徽章 -->
       <div class="flex justify-between items-start mb-3">
         <div class="flex-1">
-          <h3 class="text-sm font-bold text-white truncate group-hover:text-purple-300 transition">
-            {{ node.name }}
-          </h3>
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-bold text-white truncate group-hover:text-purple-300 transition">
+              {{ node.name }}
+            </h3>
+            <!-- 状态徽章 -->
+            <span
+              v-if="node.status === 'offline'"
+              class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/30 text-rose-300 border border-rose-500/50"
+            >
+              离线
+            </span>
+            <span
+              v-else-if="node.status === 'suspect'"
+              class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/30 text-amber-300 border border-amber-500/50"
+            >
+              可疑
+            </span>
+          </div>
           <p class="text-xs text-gray-400 mt-0.5">{{ node.protocol.toUpperCase() }}</p>
         </div>
         <div class="text-right ml-2">
@@ -167,6 +185,18 @@ const hasValidLink = computed(() => {
   if (!props.node.link) return false
   const link = String(props.node.link).trim()
   return link.length > 0 && link !== 'null' && link !== 'undefined' && link !== 'N/A'
+})
+
+// 节点状态样式
+const nodeStatusClass = computed(() => {
+  const status = props.node.status
+  if (status === 'offline') {
+    return 'from-rose-500/10 to-rose-500/5 border-rose-500/30 hover:border-rose-500/50 hover:shadow-rose-500/20 opacity-60'
+  }
+  if (status === 'suspect') {
+    return 'from-amber-500/10 to-amber-500/5 border-amber-500/30 hover:border-amber-500/50 hover:shadow-amber-500/20'
+  }
+  return 'from-white/10 to-white/5 border-white/20 hover:border-white/40 hover:shadow-purple-500/20'
 })
 
 const speedColor = computed(() => {

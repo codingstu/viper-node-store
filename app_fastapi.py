@@ -66,6 +66,10 @@ class LatencyTestRequest(BaseModel):
     """延迟测速请求模型"""
     proxy_url: str
 
+class HealthCheckRequest(BaseModel):
+    """健康检测请求模型"""
+    batch_size: int = 50  # 每批检测节点数量，Vercel 限制建议 30-50
+
 # ==================== FastAPI 应用 ====================
 
 app = FastAPI(
@@ -797,6 +801,142 @@ async def proxy_nodes_stats():
     except Exception as e:
         logger.error(f"❌ 代理 SpiderFlow 节点统计失败: {e}")
         raise HTTPException(status_code=502, detail=f"SpiderFlow 服务不可用: {str(e)}")
+
+# ==================== 节点健康检测 API ====================
+
+@app.post("/api/health-check")
+async def trigger_health_check(request: HealthCheckRequest = None):
+    """
+    手动触发节点健康检测
+    
+    每次检测一批节点，更新其在线状态到数据库
+    Vercel 环境建议 batch_size=30-50（受执行时间限制）
+    
+    Returns:
+        检测结果统计
+    """
+    try:
+        batch_size = request.batch_size if request else 50
+        
+        logger.info(f"🏥 收到健康检测请求 (batch_size={batch_size})")
+        
+        # 导入健康检测模块
+        from health_checker import run_health_check
+        
+        # 执行检测
+        result = await run_health_check(batch_size=batch_size)
+        
+        logger.info(f"✅ 健康检测完成: {result}")
+        
+        return {
+            "status": "success",
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except ImportError as e:
+        logger.error(f"❌ 健康检测模块导入失败: {e}")
+        return {
+            "status": "error",
+            "message": "健康检测模块未安装",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"❌ 健康检测失败: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/health-check/cron")
+async def cron_health_check():
+    """
+    Vercel Cron Job 触发的定时健康检测
+    
+    每30分钟由 Vercel Cron 调用一次
+    使用 GET 方法以兼容 Vercel Cron
+    """
+    try:
+        logger.info("⏰ Cron Job 触发健康检测")
+        
+        from health_checker import run_health_check
+        
+        # Cron 任务使用较小的 batch_size 确保在超时前完成
+        result = await run_health_check(batch_size=30)
+        
+        return {
+            "status": "success",
+            "trigger": "cron",
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Cron 健康检测失败: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/health-check/stats")
+async def get_health_stats():
+    """
+    获取健康检测统计数据
+    
+    返回各状态节点的数量统计
+    """
+    try:
+        # 从 Supabase 查询统计
+        url = f"{SUPABASE_URL}/rest/v1/nodes?select=status"
+        
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status == 200:
+                    rows = await resp.json()
+                    
+                    # 统计各状态数量
+                    stats = {
+                        "total": len(rows),
+                        "online": 0,
+                        "offline": 0,
+                        "suspect": 0,
+                        "unknown": 0
+                    }
+                    
+                    for row in rows:
+                        status = row.get("status", "unknown")
+                        if status in stats:
+                            stats[status] += 1
+                        else:
+                            stats["unknown"] += 1
+                    
+                    return {
+                        "status": "success",
+                        "data": stats,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                else:
+                    return {
+                        "status": "error",
+                        "message": f"查询失败: HTTP {resp.status}",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    
+    except Exception as e:
+        logger.error(f"❌ 获取健康统计失败: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 # ==================== 主程序 ====================
 

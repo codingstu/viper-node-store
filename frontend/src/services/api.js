@@ -52,7 +52,10 @@ export const nodeApi = {
         speed: Number(node.speed) || 0,
         latency: Number(node.latency) || 0,
         updated_at: node.updated_at || new Date().toISOString(),
-        is_free: node.is_free !== false
+        is_free: node.is_free !== false,
+        status: node.status || 'online',  // 健康状态：online/suspect/offline
+        last_health_check: node.last_health_check || null,
+        health_latency: node.health_latency || null
       }))
       
       return nodes
@@ -146,6 +149,74 @@ export const nodeApi = {
     } catch (error) {
       console.error('❌ 延迟测试失败:', error)
       return { status: 'error', latency: 9999 }
+    }
+  }
+}
+
+/**
+ * 健康检测 API
+ */
+export const healthCheckApi = {
+  /**
+   * 检测所有节点的健康状态
+   */
+  async checkAll() {
+    try {
+      const response = await fetch(`${VIPER_API_BASE}/health-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ check_all: true })
+      })
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return await response.json()
+    } catch (error) {
+      console.error('❌ 健康检测失败:', error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  },
+
+  /**
+   * 获取健康检测统计信息
+   */
+  async getStats() {
+    try {
+      const response = await fetch(`${VIPER_API_BASE}/health-check/stats`)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return await response.json()
+    } catch (error) {
+      console.error('❌ 获取健康统计失败:', error)
+      return {
+        total: 0,
+        online: 0,
+        offline: 0,
+        suspect: 0
+      }
+    }
+  },
+
+  /**
+   * 检测单个节点
+   */
+  async checkNode(nodeId) {
+    try {
+      const response = await fetch(`${VIPER_API_BASE}/health-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ node_ids: [nodeId] })
+      })
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return await response.json()
+    } catch (error) {
+      console.error('❌ 节点健康检测失败:', error)
+      return {
+        success: false,
+        error: error.message
+      }
     }
   }
 }

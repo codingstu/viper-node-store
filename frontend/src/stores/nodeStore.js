@@ -63,7 +63,17 @@ export const useNodeStore = defineStore('nodes', () => {
   })
 
   const healthyNodeCount = computed(() => {
-    return displayedNodes.value.filter(n => n.speed >= 5).length
+    return displayedNodes.value.filter(n => n.speed >= 5 && n.status !== 'offline').length
+  })
+
+  // 离线节点统计
+  const offlineNodeCount = computed(() => {
+    return displayedNodes.value.filter(n => n.status === 'offline').length
+  })
+
+  // 可疑节点统计
+  const suspectNodeCount = computed(() => {
+    return displayedNodes.value.filter(n => n.status === 'suspect').length
   })
 
   // ==================== 方法 ====================
@@ -176,6 +186,8 @@ export const useNodeStore = defineStore('nodes', () => {
     nodeCount,
     avgSpeed,
     healthyNodeCount,
+    offlineNodeCount,
+    suspectNodeCount,
 
     // 方法
     init,

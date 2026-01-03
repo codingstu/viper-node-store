@@ -26,6 +26,15 @@
               <!-- 手动刷新按钮 -->
               <ManualRefreshButton />
 
+              <!-- 健康检测按钮 -->
+              <button
+                @click="showHealthCheckModal = true"
+                class="px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-sm font-bold rounded-lg border border-emerald-500/50 transition"
+                title="检测所有节点的健康状态"
+              >
+                🏥 健康检测
+              </button>
+
               <!-- VIP 徽章 -->
               <div v-if="authStore.isAuthenticated" class="hidden sm:flex items-center gap-2">
                 <span class="text-sm text-gray-300">{{ authStore.displayName }}</span>
@@ -181,6 +190,13 @@
       @close="showTestModal = false"
       @test-complete="handleTestComplete"
     />
+
+    <!-- 健康检测弹窗 -->
+    <HealthCheckModal
+      :show="showHealthCheckModal"
+      @close="showHealthCheckModal = false"
+      @complete="handleHealthCheckComplete"
+    />
   </div>
 </template>
 
@@ -191,6 +207,7 @@ import { useAuthStore } from './stores/authStore'
 import NodeCard from './components/NodeCard.vue'
 import QRCodeModal from './components/QRCodeModal.vue'
 import PrecisionTestModal from './components/PrecisionTestModal.vue'
+import HealthCheckModal from './components/HealthCheckModal.vue'
 import AuthDropdown from './components/AuthDropdown.vue'
 import ManualRefreshButton from './components/ManualRefreshButton.vue'
 
@@ -198,6 +215,8 @@ const nodeStore = useNodeStore()
 const authStore = useAuthStore()
 const selectedNode = ref(null)
 const showQRCodeModal = ref(false)
+const showTestModal = ref(false)
+const showHealthCheckModal = ref(false)
 const showTestModal = ref(false)
 const lastUpdateTime = ref('--:--')
 
@@ -252,6 +271,14 @@ function updateLastUpdateTime() {
 function handleTestComplete(result) {
   console.log('✅ 测速完成:', result)
   // 此时selectedNode的speed应该已经被更新了
+}
+
+/**
+ * 处理健康检测完成
+ */
+function handleHealthCheckComplete(result) {
+  console.log('✅ 健康检测完成:', result)
+  // 节点列表已在 HealthCheckModal 中刷新
 }
 
 /**
