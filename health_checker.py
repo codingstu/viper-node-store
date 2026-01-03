@@ -329,21 +329,42 @@ class SupabaseHealthUpdater:
                 async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                     if resp.status == 200:
                         rows = await resp.json()
+                        logger.info(f"查询到 {len(rows)} 条记录")
+                        
+                        if not rows:
+                            logger.warning("Supabase 返回空结果")
+                            return []
+                        
                         nodes = []
                         for row in rows:
-                            content = row.get("content", {})
-                            if isinstance(content, str):
-                                import json
-                                content = json.loads(content)
-                            
-                            nodes.append({
-                                "id": row.get("id"),
-                                "host": content.get("host", ""),
-                                "port": content.get("port", 0),
-                                "protocol": content.get("protocol", "unknown"),
-                                "name": content.get("name", ""),
-                                "current_status": row.get("status", "unknown")
-                            })
+                            try:
+                                # content 字段是 JSONB，包含节点信息
+                                content = row.get("content", {})
+                                if isinstance(content, str):
+                                    import json
+                                    content = json.loads(content)
+                                
+                                # 提取节点关键信息
+                                host = content.get("host") or row.get("host")
+                                port = content.get("port") or row.get("port")
+                                
+                                if not host or not port:
+                                    logger.warning(f"节点 {row.get('id')} 缺少 host/port，跳过")
+                                    continue
+                                
+                                nodes.append({
+                                    "id": row.get("id"),
+                                    "host": str(host),
+                                    "port": int(port),
+                                    "protocol": content.get("protocol") or row.get("protocol", "unknown"),
+                                    "name": content.get("name", ""),
+                                    "current_status": row.get("status", "unknown")
+                                })
+                            except Exception as e:
+                                logger.error(f"解析节点 {row.get('id')} 失败: {e}")
+                                continue
+                        
+                        logger.info(f"成功解析 {len(nodes)} 个节点")
                         return nodes
                     else:
                         logger.error(f"Failed to fetch nodes: HTTP {resp.status}")
