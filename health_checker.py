@@ -294,6 +294,13 @@ class SupabaseHealthUpdater:
     def __init__(self, supabase_url: str = None, supabase_key: str = None):
         self.supabase_url = supabase_url or os.environ.get("SUPABASE_URL", "")
         self.supabase_key = supabase_key or os.environ.get("SUPABASE_KEY", "")
+        
+        if not self.supabase_url or not self.supabase_key:
+            logger.error("❌ Supabase 凭证未配置")
+            logger.error(f"SUPABASE_URL: {self.supabase_url[:50] if self.supabase_url else 'None'}...")
+            logger.error(f"SUPABASE_KEY: {self.supabase_key[:20] if self.supabase_key else 'None'}...")
+        else:
+            logger.info(f"✅ Supabase 已配置: {self.supabase_url[:50]}...")
     
     async def get_nodes_for_check(self, limit: int = 100) -> List[Dict]:
         """
@@ -312,12 +319,13 @@ class SupabaseHealthUpdater:
         try:
             # 查询需要检测的节点
             # 优先检测：1) 从未检测过的 2) 最久未检测的
-            url = f"{self.supabase_url}/rest/v1/nodes"
-            params = {
-                "select": "id,content,status,last_health_check",
-                "order": "last_health_check.asc.nullsfirst",
-                "limit": str(limit)
-            }
+            url = f"{self.supabase_url}/rest/v1/nodes?select=*&limit={limit}"
+            
+            # 按最后检测时间排序（未检测的优先）
+            if "&limit=" in url:
+                url += "&order=last_health_check.asc.nullsfirst"
+            else:
+                url += "?order=last_health_check.asc.nullsfirst"
             
             headers = {
                 "apikey": self.supabase_key,
@@ -326,10 +334,13 @@ class SupabaseHealthUpdater:
             }
             
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    logger.info(f"查询 URL: {url}")
+                    logger.info(f"HTTP 状态码: {resp.status}")
+                    
                     if resp.status == 200:
                         rows = await resp.json()
-                        logger.info(f"查询到 {len(rows)} 条记录")
+                        logger.info(f"✅ 查询到 {len(rows)} 条记录")
                         
                         if not rows:
                             logger.warning("Supabase 返回空结果")
@@ -367,7 +378,9 @@ class SupabaseHealthUpdater:
                         logger.info(f"成功解析 {len(nodes)} 个节点")
                         return nodes
                     else:
-                        logger.error(f"Failed to fetch nodes: HTTP {resp.status}")
+                        logger.error(f"❌ 查询失败: HTTP {resp.status}")
+                        text = await resp.text()
+                        logger.error(f"响应内容: {text[:200]}")
                         return []
         except Exception as e:
             logger.error(f"Error fetching nodes: {e}")
