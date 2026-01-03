@@ -217,7 +217,6 @@ const selectedNode = ref(null)
 const showQRCodeModal = ref(false)
 const showTestModal = ref(false)
 const showHealthCheckModal = ref(false)
-const showTestModal = ref(false)
 const lastUpdateTime = ref('--:--')
 
 /**
