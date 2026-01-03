@@ -439,6 +439,93 @@ class SupabaseHealthUpdater:
         return success_count, fail_count
 
 
+async def get_nodes_direct(limit: int = 100) -> List[Dict]:
+    """
+    直接从 Supabase 获取节点（无需通过 updater）
+    用于在 health_check API 中直接调用
+    """
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    supabase_key = os.environ.get("SUPABASE_KEY", "")
+    
+    logger.info(f"🔍 尝试直接从 Supabase 获取节点")
+    logger.info(f"SUPABASE_URL: {supabase_url[:50] if supabase_url else 'NOT SET'}...")
+    logger.info(f"SUPABASE_KEY: {supabase_key[:20] if supabase_key else 'NOT SET'}...")
+    
+    if not supabase_url or not supabase_key:
+        logger.error("❌ Supabase 凭证未配置")
+        return []
+    
+    try:
+        url = f"{supabase_url}/rest/v1/nodes?select=*&limit={limit}&order=last_health_check.asc.nullsfirst"
+        
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json"
+        }
+        
+        logger.info(f"查询 URL: {url[:100]}...")
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                logger.info(f"HTTP 状态码: {resp.status}")
+                
+                if resp.status == 200:
+                    rows = await resp.json()
+                    logger.info(f"✅ 直接查询返回 {len(rows)} 条记录")
+                    
+                    if not rows:
+                        logger.warning("⚠️ Supabase 返回空结果")
+                        return []
+                    
+                    nodes = []
+                    for row in rows:
+                        try:
+                            # content 字段是 JSONB，包含节点信息
+                            content = row.get("content", {})
+                            if isinstance(content, str):
+                                import json
+                                content = json.loads(content)
+                            
+                            # 提取节点关键信息
+                            host = content.get("host") or row.get("host")
+                            port = content.get("port") or row.get("port")
+                            
+                            if not host or not port:
+                                logger.debug(f"⚠️ 节点 {row.get('id')} 缺少 host/port")
+                                continue
+                            
+                            node = {
+                                "id": row.get("id"),
+                                "host": str(host),
+                                "port": int(port),
+                                "protocol": content.get("protocol") or row.get("protocol", "unknown"),
+                                "name": content.get("name", ""),
+                                "current_status": row.get("status", "unknown")
+                            }
+                            
+                            logger.debug(f"✓ 解析节点: {node['name']} ({node['host']}:{node['port']})")
+                            nodes.append(node)
+                            
+                        except Exception as e:
+                            logger.warning(f"⚠️ 解析节点 {row.get('id')} 失败: {e}")
+                            continue
+                    
+                    logger.info(f"📦 成功解析 {len(nodes)} 个节点")
+                    return nodes
+                else:
+                    logger.error(f"❌ HTTP {resp.status}")
+                    text = await resp.text()
+                    logger.error(f"响应: {text[:200]}")
+                    return []
+                    
+    except Exception as e:
+        logger.error(f"❌ 获取节点失败: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return []
+
+
 async def run_health_check(batch_size: int = 50) -> Dict:
     """
     执行健康检测的主函数
@@ -461,11 +548,17 @@ async def run_health_check(batch_size: int = 50) -> Dict:
     )
     updater = SupabaseHealthUpdater()
     
-    # 获取待检测节点
-    nodes = await updater.get_nodes_for_check(limit=batch_size)
+    # 尝试获取待检测节点
+    # 1. 先尝试用 get_nodes_direct（直接查询）
+    nodes = await get_nodes_direct(limit=batch_size)
+    
+    # 2. 如果直接查询失败，回退到 updater 方式
+    if not nodes:
+        logger.warning("⚠️ 直接查询失败，尝试 updater 方式...")
+        nodes = await updater.get_nodes_for_check(limit=batch_size)
     
     if not nodes:
-        logger.warning("没有需要检测的节点")
+        logger.error("❌ 无法获取节点列表 (两种方式都失败)")
         return {
             "status": "no_nodes",
             "checked_count": 0,
