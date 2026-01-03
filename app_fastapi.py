@@ -156,6 +156,10 @@ async def get_supabase_nodes(
                                 "mainland_latency": row.get("mainland_latency", 9999),
                                 "overseas_score": row.get("overseas_score", 0),
                                 "overseas_latency": row.get("overseas_latency", 9999),
+                                # 健康检测字段
+                                "status": row.get("status", "online"),  # 节点状态：online/suspect/offline
+                                "last_health_check": row.get("last_health_check"),
+                                "health_latency": row.get("health_latency"),
                                 # 计算活跃状态：latency < 9999 表示已测试
                                 "alive": row.get("latency", 9999) < 9999
                             }
