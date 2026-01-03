@@ -823,23 +823,102 @@ async def trigger_health_check(request: HealthCheckRequest = None):
         batch_size = request.batch_size if request else 50
         
         logger.info(f"🏥 收到健康检测请求 (batch_size={batch_size})")
+        logger.info(f"SUPABASE_URL: {SUPABASE_URL[:50] if SUPABASE_URL else 'NOT SET'}...")
+        logger.info(f"SUPABASE_KEY: {SUPABASE_KEY[:20] if SUPABASE_KEY else 'NOT SET'}...")
         
         # 导入健康检测模块
-        from health_checker import run_health_check
+        from health_checker import run_health_check, LightweightHealthChecker, SupabaseHealthUpdater
+        from health_checker import NodeStatus
+        from datetime import datetime as dt
         
-        # 执行检测
-        result = await run_health_check(batch_size=batch_size)
+        # 1. 先从 app_fastapi 的 get_supabase_nodes 获取节点
+        logger.info("📡 使用 app_fastapi 的方式获取节点...")
+        nodes = await get_supabase_nodes(limit=batch_size, show_free=True, show_china=True)
         
-        logger.info(f"✅ 健康检测完成: {result}")
+        logger.info(f"✅ 获取到 {len(nodes)} 个节点")
+        
+        if not nodes:
+            logger.warning("❌ 没有节点可检测")
+            return {
+                "status": "success",
+                "data": {
+                    "status": "no_nodes",
+                    "checked_count": 0,
+                    "online_count": 0,
+                    "offline_count": 0,
+                    "suspect_count": 0,
+                    "duration_seconds": 0
+                },
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        # 2. 执行健康检测
+        logger.info("🏥 开始检测节点...")
+        checker = LightweightHealthChecker(
+            tcp_timeout=5.0,
+            http_timeout=8.0,
+            max_retries=2,
+            max_concurrent=20
+        )
+        
+        # 将节点数据转换为检测格式
+        check_nodes = []
+        for node in nodes:
+            check_nodes.append({
+                "id": node.get("id", ""),
+                "host": node.get("host", ""),
+                "port": node.get("port", 0),
+                "protocol": node.get("protocol", "unknown"),
+                "name": node.get("name", "")
+            })
+        
+        # 执行批量检测
+        results = await checker.check_nodes_batch(check_nodes)
+        
+        # 3. 统计结果
+        online_count = sum(1 for r in results if r.status == NodeStatus.ONLINE)
+        offline_count = sum(1 for r in results if r.status == NodeStatus.OFFLINE)
+        suspect_count = sum(1 for r in results if r.status == NodeStatus.SUSPECT)
+        
+        logger.info(f"📊 检测结果: 在线={online_count}, 离线={offline_count}, 可疑={suspect_count}")
+        
+        # 4. 更新数据库
+        logger.info("💾 更新数据库...")
+        updater = SupabaseHealthUpdater(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
+        success, fail = await updater.update_node_status(results)
+        logger.info(f"✅ 数据库更新: 成功={success}, 失败={fail}")
+        
+        # 获取问题节点列表
+        problem_nodes = [
+            {
+                "id": r.node_id,
+                "name": r.host,
+                "host": r.host,
+                "port": r.port,
+                "status": r.status.value
+            }
+            for r in results if r.status in [NodeStatus.OFFLINE, NodeStatus.SUSPECT]
+        ]
         
         return {
             "status": "success",
-            "data": result,
+            "data": {
+                "status": "completed",
+                "total": len(results),
+                "online": online_count,
+                "offline": offline_count,
+                "suspect": suspect_count,
+                "problem_nodes": problem_nodes,
+                "update_success": success,
+                "update_fail": fail
+            },
             "timestamp": datetime.now().isoformat()
         }
         
     except ImportError as e:
         logger.error(f"❌ 健康检测模块导入失败: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return {
             "status": "error",
             "message": "健康检测模块未安装",
@@ -847,6 +926,8 @@ async def trigger_health_check(request: HealthCheckRequest = None):
         }
     except Exception as e:
         logger.error(f"❌ 健康检测失败: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return {
             "status": "error",
             "message": str(e),
