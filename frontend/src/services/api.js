@@ -40,6 +40,8 @@ export const nodeApi = {
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       let nodes = await response.json()
       
+      console.log('📦 获取节点数据，示例节点:', nodes.length > 0 ? nodes[0] : 'empty')
+      
       // 规范化数据格式
       nodes = nodes.map(node => ({
         id: node.id || `${node.host}:${node.port}`,

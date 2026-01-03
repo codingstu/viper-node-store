@@ -224,7 +224,7 @@ async function startHealthCheck() {
   try {
     currentStatus.value = '正在发起健康检测...'
 
-    // 调用后端 API 进行批量检测
+    // 调用后端 API 进行批量检测（检测所有节点）
     const response = await healthCheckApi.checkAll()
 
     if (response.status === "success" && response.data) {

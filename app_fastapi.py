@@ -820,7 +820,7 @@ async def trigger_health_check(request: HealthCheckRequest = None):
         检测结果统计
     """
     try:
-        batch_size = request.batch_size if request else 50
+        batch_size = request.batch_size if request else 100
         
         logger.info(f"🏥 收到健康检测请求 (batch_size={batch_size})")
         logger.info(f"SUPABASE_URL: {SUPABASE_URL[:50] if SUPABASE_URL else 'NOT SET'}...")
