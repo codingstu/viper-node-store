@@ -809,8 +809,12 @@ async def trigger_health_check(request: HealthCheckRequest = None):
     """
     手动触发节点健康检测
     
+    由前端「🏥 健康检测」按钮调用
     每次检测一批节点，更新其在线状态到数据库
     Vercel 环境建议 batch_size=30-50（受执行时间限制）
+    
+    注意：Vercel Hobby 免费计划不支持 Cron Jobs，需手动触发
+    如需定时检测，可使用免费服务如 cron-job.org 定时调用此 API
     
     Returns:
         检测结果统计
@@ -849,36 +853,9 @@ async def trigger_health_check(request: HealthCheckRequest = None):
             "timestamp": datetime.now().isoformat()
         }
 
-@app.get("/api/health-check/cron")
-async def cron_health_check():
-    """
-    Vercel Cron Job 触发的定时健康检测
-    
-    每30分钟由 Vercel Cron 调用一次
-    使用 GET 方法以兼容 Vercel Cron
-    """
-    try:
-        logger.info("⏰ Cron Job 触发健康检测")
-        
-        from health_checker import run_health_check
-        
-        # Cron 任务使用较小的 batch_size 确保在超时前完成
-        result = await run_health_check(batch_size=30)
-        
-        return {
-            "status": "success",
-            "trigger": "cron",
-            "data": result,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"❌ Cron 健康检测失败: {e}")
-        return {
-            "status": "error",
-            "message": str(e),
-            "timestamp": datetime.now().isoformat()
-        }
+# 注意：Vercel Cron Jobs 仅在 Pro 及以上计划支持
+# Hobby 免费计划：使用前端按钮手动触发
+# 如需定时任务，可使用外部免费服务（如 cron-job.org）定时调用 /api/health-check
 
 @app.get("/api/health-check/stats")
 async def get_health_stats():

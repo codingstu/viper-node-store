@@ -23,12 +23,6 @@
       "src": "/(.*)",
       "dest": "/frontend/$1"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/health-check/cron",
-      "schedule": "*/30 * * * *"
-    }
   ]
 }
 
