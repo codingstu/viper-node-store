@@ -152,7 +152,7 @@
         </div>
       </section>
 
-      <!-- 节点网格 - 使用虚拟滚动 -->
+      <!-- 节点网格 - 使用原生 grid + content-visibility 优化 -->
       <section class="max-w-7xl mx-auto px-4 pb-12">
         <div v-if="nodeStore.isLoading" class="text-center py-12">
           <p class="text-gray-400">加载中...</p>
@@ -162,23 +162,15 @@
           <p class="text-gray-400">未找到匹配的节点</p>
         </div>
 
-        <RecycleScroller
-          v-else
-          :items="nodeStore.displayedNodes"
-          :item-size="null"
-          class="scroller"
-          key-field="id"
-        >
-          <template #default="{ item: node }">
-            <div class="node-item">
-              <NodeCard
-                :node="node"
-                @show-qrcode="selectedNode = node; showQRCodeModal = true"
-                @show-precision-test="selectedNode = node; showTestModal = true"
-              />
-            </div>
-          </template>
-        </RecycleScroller>
+        <div v-else class="node-grid">
+          <NodeCard
+            v-for="node in nodeStore.displayedNodes"
+            :key="node.id"
+            :node="node"
+            @show-qrcode="selectedNode = node; showQRCodeModal = true"
+            @show-precision-test="selectedNode = node; showTestModal = true"
+          />
+        </div>
       </section>
     </div>
 
@@ -210,8 +202,6 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { RecycleScroller } from 'vue-virtual-scroller'
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import { useNodeStore } from './stores/nodeStore'
 import { useAuthStore } from './stores/authStore'
 import NodeCard from './components/NodeCard.vue'
@@ -330,32 +320,22 @@ function handleLoginSuccess() {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* 虚拟滚动容器样式 */
-.scroller {
-  height: calc(100vh - 450px);
-  min-height: 400px;
-}
-
-.node-item {
+/* 节点网格布局 - 使用 content-visibility 优化性能 */
+.node-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 1rem;
-  padding: 0 0 1rem 0;
 }
 
-.node-item > * {
-  grid-column: span 1;
+.node-grid > * {
+  content-visibility: auto;
+  contain-intrinsic-size: 340px 450px;
 }
 
 /* 响应式适配 */
 @media (max-width: 768px) {
-  .node-item {
+  .node-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .scroller {
-    height: auto;
-    min-height: auto;
   }
 }
 </style>
