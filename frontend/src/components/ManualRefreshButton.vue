@@ -8,7 +8,7 @@
       :title="isLoading ? '正在刷新...' : '手动从 Supabase 拉取最新节点数据'"
     >
       <span class="refresh-icon">{{ refreshIcon }}</span>
-      {{ buttonText }}
+      <span class="refresh-text">{{ buttonText }}</span>
     </button>
 
     <!-- 刷新状态提示 -->
@@ -27,8 +27,8 @@ const refreshStatus = ref('')
 
 const buttonText = computed(() => {
   if (isLoading.value) return '正在刷新...'
-  if (lastRefreshSuccess.value) return '✅ 已刷新'
-  return '🔄 手动刷新'
+  if (lastRefreshSuccess.value) return '已刷新'
+  return '手动刷新'
 })
 
 const refreshIcon = computed(() => {
@@ -135,6 +135,10 @@ const handleManualRefresh = async () => {
 .refresh-icon {
   font-size: 14px;
   display: inline-block;
+}
+
+.refresh-text {
+  display: inline;
 }
 
 .refresh-status {

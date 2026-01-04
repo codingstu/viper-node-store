@@ -1,34 +1,35 @@
 <template>
   <div :class="[
-    'glass-card group p-4 rounded-xl bg-gradient-to-br backdrop-blur border transition-all duration-300 hover:shadow-lg',
-    nodeStatusClass
+    'glass-card group p-4 rounded-xl bg-gradient-to-br backdrop-blur border transition-all duration-300',
+    nodeStatusClass,
+    node.status === 'offline' && 'pointer-events-none opacity-50'
   ]">
     <!-- 显示模式：正常卡片或 QR 码卡片 -->
     <div v-if="!showingQRCode">
       <!-- 头部：名称和协议 + 状态徽章 -->
       <div class="flex justify-between items-start mb-3">
-        <div class="flex-1">
+        <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
-            <h3 class="text-sm font-bold text-white truncate group-hover:text-purple-300 transition">
+            <h3 class="text-sm font-bold text-white line-clamp-1 group-hover:text-purple-300 transition" :title="node.name">
               {{ node.name }}
             </h3>
             <!-- 状态徽章 -->
             <span
               v-if="node.status === 'offline'"
-              class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/30 text-rose-300 border border-rose-500/50"
+              class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/30 text-rose-300 border border-rose-500/50 whitespace-nowrap flex-shrink-0"
             >
-              离线
+              OFFLINE
             </span>
             <span
               v-else-if="node.status === 'suspect'"
-              class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/30 text-amber-300 border border-amber-500/50"
+              class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/30 text-amber-300 border border-amber-500/50 whitespace-nowrap flex-shrink-0"
             >
               可疑
             </span>
           </div>
           <p class="text-xs text-gray-400 mt-0.5">{{ node.protocol.toUpperCase() }}</p>
         </div>
-        <div class="text-right ml-2">
+        <div class="text-right ml-2 flex-shrink-0">
           <p class="text-xs text-gray-400">{{ node.country }}</p>
         </div>
       </div>
@@ -74,19 +75,7 @@
         </div>
       </div>
 
-      <!-- 质量评分 -->
-      <div class="mb-4 p-2 bg-white/5 rounded-lg">
-        <div class="flex items-center justify-between">
-          <span class="text-xs text-gray-400">质量评分</span>
-          <span :class="['text-sm font-bold', qualityColor]">{{ qualityScore }}/100</span>
-        </div>
-        <div class="h-1 bg-gray-700 rounded-full overflow-hidden mt-1">
-          <div
-            :style="{ width: qualityScore + '%' }"
-            :class="['h-full transition-all duration-500', qualityBarColor]"
-          />
-        </div>
-      </div>
+      <!-- 质量评分 - 已删除 -->
 
       <!-- 按钮组 -->
       <div class="grid grid-cols-2 gap-2">
@@ -95,10 +84,10 @@
           @click="copyLink"
           :class="[
             'py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.98]',
-            hasValidLink ? 'bg-white/5 hover:bg-emerald-500/20 text-gray-300 hover:text-emerald-300 border border-white/10 hover:border-emerald-500/30' : 'bg-gray-800/50 text-gray-500 cursor-not-allowed border border-gray-700'
+            hasValidLink && node.status !== 'offline' ? 'bg-white/5 hover:bg-emerald-500/20 text-gray-300 hover:text-emerald-300 border border-white/10 hover:border-emerald-500/30' : 'bg-gray-800/50 text-gray-500 cursor-not-allowed border border-gray-700'
           ]"
-          :disabled="!hasValidLink"
-          :title="hasValidLink ? '复制节点链接到剪贴板' : '此节点没有可用链接'"
+          :disabled="!hasValidLink || node.status === 'offline'"
+          :title="node.status === 'offline' ? '此节点已离线，无法使用' : (hasValidLink ? '复制节点链接到剪贴板' : '此节点没有可用链接')"
         >
           📋 COPY
         </button>
@@ -108,10 +97,10 @@
           @click="toggleQRCode"
           :class="[
             'py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.98]',
-            hasValidLink ? 'bg-white/5 hover:bg-blue-500/20 text-gray-300 hover:text-blue-300 border border-white/10 hover:border-blue-500/30' : 'bg-gray-800/50 text-gray-500 cursor-not-allowed border border-gray-700'
+            hasValidLink && node.status !== 'offline' ? 'bg-white/5 hover:bg-blue-500/20 text-gray-300 hover:text-blue-300 border border-white/10 hover:border-blue-500/30' : 'bg-gray-800/50 text-gray-500 cursor-not-allowed border border-gray-700'
           ]"
-          :disabled="!hasValidLink"
-          :title="hasValidLink ? '显示节点二维码' : '此节点没有可用链接'"
+          :disabled="!hasValidLink || node.status === 'offline'"
+          :title="node.status === 'offline' ? '此节点已离线，无法使用' : (hasValidLink ? '显示节点二维码' : '此节点没有可用链接')"
         >
           📱 QR CODE
         </button>
@@ -119,8 +108,12 @@
         <!-- 精确测速按钮 (占两列) -->
         <button
           @click="emit('show-precision-test')"
-          class="col-span-2 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-orange-500/20 text-gray-300 hover:text-orange-300 border border-white/10 hover:border-orange-500/30 transition-all active:scale-[0.98]"
-          title="进行精确测速"
+          :disabled="node.status === 'offline'"
+          :class="[
+            'col-span-2 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.98]',
+            node.status === 'offline' ? 'bg-gray-800/50 text-gray-500 cursor-not-allowed border border-gray-700' : 'bg-white/5 hover:bg-orange-500/20 text-gray-300 hover:text-orange-300 border border-white/10 hover:border-orange-500/30'
+          ]"
+          :title="node.status === 'offline' ? '此节点已离线，无法使用' : '进行精确测速'"
         >
           ⚡ 精确测速
         </button>
@@ -191,12 +184,12 @@ const hasValidLink = computed(() => {
 const nodeStatusClass = computed(() => {
   const status = props.node.status
   if (status === 'offline') {
-    return 'from-rose-500/10 to-rose-500/5 border-rose-500/30 hover:border-rose-500/50 hover:shadow-rose-500/20 opacity-60'
+    return 'from-rose-500/10 to-rose-500/5 border-rose-500/30 hover:border-rose-500/50 hover:shadow-rose-500/20'
   }
   if (status === 'suspect') {
     return 'from-amber-500/10 to-amber-500/5 border-amber-500/30 hover:border-amber-500/50 hover:shadow-amber-500/20'
   }
-  return 'from-white/10 to-white/5 border-white/20 hover:border-white/40 hover:shadow-purple-500/20'
+  return 'from-white/10 to-white/5 border-white/20 hover:border-white/40 hover:shadow-purple-500/20 hover:shadow-lg'
 })
 
 const speedColor = computed(() => {
@@ -222,26 +215,6 @@ const latencyColor = computed(() => {
 const latencyBarColor = computed(() => {
   if (props.node.latency < 100) return 'bg-emerald-500'
   if (props.node.latency < 300) return 'bg-amber-500'
-  return 'bg-rose-500'
-})
-
-const qualityScore = computed(() => {
-  const latencyScore = Math.max(0, 100 - props.node.latency)
-  const speedScore = Math.min(100, (props.node.speed / 50) * 100)
-  return Math.round((latencyScore + speedScore) / 2)
-})
-
-const qualityColor = computed(() => {
-  const score = qualityScore.value
-  if (score >= 80) return 'text-emerald-400'
-  if (score >= 60) return 'text-amber-400'
-  return 'text-red-400'
-})
-
-const qualityBarColor = computed(() => {
-  const score = qualityScore.value
-  if (score >= 80) return 'bg-emerald-500'
-  if (score >= 60) return 'bg-amber-500'
   return 'bg-rose-500'
 })
 

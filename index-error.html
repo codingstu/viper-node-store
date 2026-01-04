@@ -144,6 +144,12 @@
                     <span class="text-sm">⚡</span> TEST
                 </button>
 
+                <button onclick="toggleHealthCheckModal()" id="health-check-btn"
+                    class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 rounded-lg text-xs font-mono font-bold text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1.5"
+                    title="检测节点健康状态">
+                    <span class="text-sm">🏥</span> 健康检测
+                </button>
+
                 <button onclick="toggleAuthModal()" id="auth-btn"
                     class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-mono font-bold text-gray-400 hover:text-white transition-colors">
                     LOGIN
@@ -348,6 +354,88 @@
                     class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
                     关闭
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 健康检测模态框 -->
+    <div id="health-check-modal" class="fixed inset-0 z-[116] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="toggleHealthCheckModal()"></div>
+        <div class="relative glass-card p-6 rounded-2xl w-full max-w-md border border-rose-500/20 animate-fade-in z-20 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-2 tracking-wide flex items-center gap-2">
+                <span class="text-xl">🏥</span> 节点健康检测
+            </h3>
+            <p class="text-xs text-gray-500 font-mono mb-4" id="health-check-status">检测数据库中所有节点的连通性</p>
+            
+            <!-- 统计信息 -->
+            <div id="health-stats" class="grid grid-cols-4 gap-2 mb-4">
+                <div class="bg-white/5 rounded-lg p-2 text-center">
+                    <div class="text-lg font-bold text-white" id="stat-total">--</div>
+                    <div class="text-[10px] text-gray-500">总计</div>
+                </div>
+                <div class="bg-emerald-500/10 rounded-lg p-2 text-center">
+                    <div class="text-lg font-bold text-emerald-400" id="stat-online">--</div>
+                    <div class="text-[10px] text-emerald-500">在线</div>
+                </div>
+                <div class="bg-rose-500/10 rounded-lg p-2 text-center">
+                    <div class="text-lg font-bold text-rose-400" id="stat-offline">--</div>
+                    <div class="text-[10px] text-rose-500">离线</div>
+                </div>
+                <div class="bg-amber-500/10 rounded-lg p-2 text-center">
+                    <div class="text-lg font-bold text-amber-400" id="stat-suspect">--</div>
+                    <div class="text-[10px] text-amber-500">可疑</div>
+                </div>
+            </div>
+            
+            <div id="health-check-idle" class="space-y-3">
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    点击开始检测将对数据库中的节点进行 TCP + HTTP 连通性测试。
+                    <br/>• 每次检测约 50 个节点
+                    <br/>• 失败节点自动重试 2 次
+                    <br/>• 无法连接的节点将被标记为 <span class="text-rose-400">离线</span>
+                </p>
+                <div class="flex gap-2">
+                    <button onclick="startHealthCheck()" id="start-health-check-btn"
+                        class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        开始检测
+                    </button>
+                    <button onclick="toggleHealthCheckModal()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+
+            <div id="health-check-running" class="hidden space-y-3">
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-gray-400">检测进度</span>
+                        <span class="text-rose-400 font-mono font-bold" id="health-check-progress">检测中...</span>
+                    </div>
+                    <div class="h-2 w-full bg-black/40 rounded-full overflow-hidden">
+                        <div id="health-check-bar" class="h-full bg-rose-500 w-0 transition-all duration-300 animate-pulse"></div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 font-mono">
+                    正在检测节点连通性，请稍候...
+                </div>
+            </div>
+
+            <div id="health-check-done" class="hidden space-y-3">
+                <div class="bg-rose-500/10 border border-rose-500/30 p-3 rounded-lg">
+                    <p class="text-sm text-rose-400 font-bold">✅ 检测完成！</p>
+                    <p class="text-xs text-gray-400 mt-1" id="health-check-result-msg">--</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="startHealthCheck()" 
+                        class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        继续检测
+                    </button>
+                    <button onclick="toggleHealthCheckModal()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        关闭
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -928,17 +1016,21 @@
         // ================= 📡 实时监控遥测逻辑 =================
         let lastBytesTotal = 0;
         let lastCheckTime = 0;
+        let telemetryInterval = null;
 
         async function initTelemetry() {
-            // 每 3 秒刷新一次数据
-            setInterval(updateMonitorStats, 3000);
+            // 🔥 性能优化：将轮询频率从 3秒 改为 10秒，减少网络请求
+            if (telemetryInterval) clearInterval(telemetryInterval);
+            telemetryInterval = setInterval(updateMonitorStats, 10000);
             updateMonitorStats(); // 立即执行一次
         }
 
         async function updateMonitorStats() {
             try {
                 // 🔥 修复：这些统计数据来自 SpiderFlow 后端，不是 viper-node-store
-                const sysRes = await fetch(`${SPIDERFLOW_API_BASE}/api/system/stats`);
+                const sysRes = await fetch(`${SPIDERFLOW_API_BASE}/api/system/stats`, {
+                    signal: AbortSignal.timeout(5000) // 5秒超时，避免长时间挂起
+                });
                 if (sysRes.ok) {
                     const sysData = await sysRes.json();
                     if (sysData.network) {
@@ -1025,17 +1117,63 @@
 
         // 渲染节点卡片
         // ================= 节点渲染与显示 =================
+        
+        // 🔥 性能优化：分批渲染大量节点，避免一次性渲染导致卡顿
+        const RENDER_BATCH_SIZE = 50; // 首屏渲染50个
+        let allNodesToRender = [];
+        let renderedCount = 0;
+        
         function renderNodes(data) {
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
+            renderedCount = 0;
+            
             if (data.length === 0) {
                 document.getElementById('empty-state').classList.remove('hidden');
                 return;
             }
-            data.forEach((node, index) => {
+            
+            document.getElementById('empty-state').classList.add('hidden');
+            allNodesToRender = data;
+            
+            // 首屏渲染前50个节点
+            const firstBatch = data.slice(0, RENDER_BATCH_SIZE);
+            firstBatch.forEach((node, index) => {
                 grid.appendChild(createNodeCard(node, index));
             });
+            renderedCount = firstBatch.length;
+            
+            // 如果还有更多节点，添加"加载更多"按钮
+            if (data.length > RENDER_BATCH_SIZE) {
+                const loadMoreBtn = document.createElement('div');
+                loadMoreBtn.id = 'load-more-container';
+                loadMoreBtn.className = 'col-span-full flex justify-center py-6';
+                loadMoreBtn.innerHTML = `
+                    <button onclick="loadMoreNodes()" class="px-6 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-bold transition-colors">
+                        加载更多 (${data.length - RENDER_BATCH_SIZE} 个)
+                    </button>
+                `;
+                grid.appendChild(loadMoreBtn);
+            }
         }
+        
+        function loadMoreNodes() {
+            const grid = document.getElementById('grid');
+            const loadMoreContainer = document.getElementById('load-more-container');
+            
+            // 移除加载更多按钮
+            if (loadMoreContainer) {
+                loadMoreContainer.remove();
+            }
+            
+            // 渲染剩余节点
+            const remainingNodes = allNodesToRender.slice(renderedCount);
+            remainingNodes.forEach((node, index) => {
+                grid.appendChild(createNodeCard(node, renderedCount + index));
+            });
+            renderedCount = allNodesToRender.length;
+        }
+        
         function renderCnNodes() {
             const grid = document.getElementById('cn-grid');
             grid.innerHTML = '';
@@ -1044,8 +1182,14 @@
             });
         }
       function createNodeCard(node, index) {
-            const delay = Math.min(index * 30, 800);
+            // 🔥 性能优化：只对前20个节点添加动画延迟，后续节点立即显示
+            const delay = index < 20 ? Math.min(index * 20, 400) : 0;
             const cnName = countryMap[node.country] || node.country || '境外';
+
+            // 0. 检查节点健康状态 (优先级最高)
+            const healthStatus = node.status || 'unknown';
+            const isOffline = healthStatus === 'offline';
+            const isSuspect = healthStatus === 'suspect';
 
             // 1. 获取基础数据 (这里只定义一次，防止报错)
             const latency = node.latency || node.latency_ms || 0;
@@ -1066,8 +1210,22 @@
 
             // 4. 样式状态判定
             let speedColor = 'text-gray-500', barColor = 'bg-gray-700', glowClass = '', statusBadge = '';
+            let cardExtraClass = '';
+            let offlineBadge = '';
 
-            if (qualityScore >= 70) {
+            // 离线状态优先显示
+            if (isOffline) {
+                speedColor = 'text-gray-600';
+                barColor = 'bg-gray-700';
+                cardExtraClass = 'opacity-60 grayscale-[30%]';
+                statusBadge = '<span class="absolute top-2 right-2 px-1.5 py-0.5 bg-rose-900/80 text-rose-300 text-[8px] font-mono rounded">OFFLINE</span>';
+                offlineBadge = '<span class="absolute top-2 left-2 w-2 h-2 bg-rose-500 rounded-full"></span>';
+            } else if (isSuspect) {
+                speedColor = 'text-amber-500';
+                barColor = 'bg-amber-600';
+                cardExtraClass = 'opacity-80';
+                statusBadge = '<span class="absolute top-2 right-2 px-1.5 py-0.5 bg-amber-900/80 text-amber-300 text-[8px] font-mono rounded">SUSPECT</span>';
+            } else if (qualityScore >= 70) {
                 speedColor = 'text-emerald-400';
                 barColor = 'bg-emerald-500';
                 glowClass = 'shadow-[0_0_8px_rgba(16,185,129,0.4)]';
@@ -1089,13 +1247,14 @@
             const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-');
 
             const card = document.createElement('div');
-            card.className = "glass-card rounded-xl p-4 relative group hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-[180px] animate-fade-in hover:shadow-lg hover:shadow-emerald-900/10";
+            card.className = `glass-card rounded-xl p-4 relative group hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-[180px] animate-fade-in hover:shadow-lg hover:shadow-emerald-900/10 ${cardExtraClass}`;
             card.style.animationDelay = `${delay}ms`;
             card.id = nodeId;
 
             // 6. 组装 HTML
             card.innerHTML = `
                 ${statusBadge}
+                ${offlineBadge}
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex items-center gap-2.5">
                         <span class="text-2xl filter drop-shadow-md">${getFlagEmoji(node.country)}</span>
@@ -2091,9 +2250,120 @@
             }
         }
 
-        const observer = new MutationObserver((mutations) => injectGhostButton());
-        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+        // 🔥 性能优化：限制 MutationObserver 的监听范围，避免全局 DOM 监听
+        const authModal = document.getElementById('auth-modal');
+        if (authModal) {
+            const observer = new MutationObserver((mutations) => injectGhostButton());
+            observer.observe(authModal, { childList: true, subtree: false });
+        }
+        // 延迟注入，只执行一次
         setTimeout(injectGhostButton, 500);
+
+        // ================= 🏥 健康检测逻辑 =================
+        
+        let healthCheckInProgress = false;
+        
+        function toggleHealthCheckModal() {
+            const modal = document.getElementById('health-check-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                // 打开时加载统计数据
+                loadHealthStats();
+                // 重置UI状态
+                document.getElementById('health-check-idle').classList.remove('hidden');
+                document.getElementById('health-check-running').classList.add('hidden');
+                document.getElementById('health-check-done').classList.add('hidden');
+            }
+        }
+        
+        async function loadHealthStats() {
+            try {
+                const res = await fetch(`${VIPER_API_BASE}/api/health-check/stats`, {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'success' && data.data) {
+                        document.getElementById('stat-total').innerText = data.data.total || '--';
+                        document.getElementById('stat-online').innerText = data.data.online || '--';
+                        document.getElementById('stat-offline').innerText = data.data.offline || '--';
+                        document.getElementById('stat-suspect').innerText = data.data.suspect || '--';
+                    }
+                }
+            } catch (e) {
+                console.warn('[HealthCheck] Failed to load stats:', e);
+            }
+        }
+        
+        async function startHealthCheck() {
+            if (healthCheckInProgress) {
+                showToast('检测进行中，请稍候...');
+                return;
+            }
+            
+            healthCheckInProgress = true;
+            
+            // 更新UI
+            document.getElementById('health-check-idle').classList.add('hidden');
+            document.getElementById('health-check-running').classList.remove('hidden');
+            document.getElementById('health-check-done').classList.add('hidden');
+            document.getElementById('health-check-bar').style.width = '30%';
+            
+            try {
+                console.log('[HealthCheck] 开始健康检测...');
+                
+                const res = await fetch(`${VIPER_API_BASE}/api/health-check`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ batch_size: 50 })
+                });
+                
+                document.getElementById('health-check-bar').style.width = '80%';
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('[HealthCheck] 检测结果:', data);
+                    
+                    document.getElementById('health-check-bar').style.width = '100%';
+                    
+                    // 显示完成状态
+                    document.getElementById('health-check-running').classList.add('hidden');
+                    document.getElementById('health-check-done').classList.remove('hidden');
+                    
+                    if (data.status === 'success' && data.data) {
+                        const result = data.data;
+                        document.getElementById('health-check-result-msg').innerText = 
+                            `检测 ${result.checked_count} 个节点 | 在线: ${result.online_count} | 离线: ${result.offline_count} | 可疑: ${result.suspect_count} | 耗时: ${result.duration_seconds}s`;
+                        
+                        // 更新统计
+                        await loadHealthStats();
+                        
+                        showToast(`✅ 检测完成！在线: ${result.online_count}, 离线: ${result.offline_count}`);
+                    } else {
+                        document.getElementById('health-check-result-msg').innerText = data.message || '检测完成';
+                    }
+                    
+                    // 刷新节点列表以显示最新状态
+                    setTimeout(() => fetchData(), 1000);
+                    
+                } else {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                
+            } catch (e) {
+                console.error('[HealthCheck] 检测失败:', e);
+                
+                document.getElementById('health-check-running').classList.add('hidden');
+                document.getElementById('health-check-done').classList.remove('hidden');
+                document.getElementById('health-check-result-msg').innerText = `检测失败: ${e.message}`;
+                
+                showToast('❌ 检测失败: ' + e.message);
+            } finally {
+                healthCheckInProgress = false;
+            }
+        }
 
     </script>
 </body>
