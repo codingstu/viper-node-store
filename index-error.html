@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHADOW NEXUS | 节点核心</title>
+
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'%3E%3Cpath d='M13 10V3L4 14h7v7l9-11h-7z'/%3E%3C/svg%3E"
+        type="image/svg+xml">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.6.1/dist/easy.qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: { 'viper-dark': '#050505', 'viper-card': '#111111' },
+                    animation: { 'fade-in': 'fadeIn 0.5s ease-out forwards' },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050505;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.06), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.06), transparent 25%);
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        .glass-card {
+            background: rgba(20, 20, 22, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* 强制限制二维码最大宽度，防止撑破弹窗 */
+        #qrcode {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #qrcode img,
+        #qrcode canvas {
+            display: block;
+            max-width: 100% !important;
+            height: auto !important;
+            border: 4px solid white;
+            border-radius: 4px;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+
+<body class="text-gray-300 min-h-screen pb-20">
+
+    <div class="fixed top-0 left-0 w-full z-50 border-b border-white/5 bg-[#050505]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="relative group">
+                    <div
+                        class="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 animate-pulse">
+                    </div>
+                    <div
+                        class="relative w-9 h-9 rounded-lg bg-[#0a0a0a] border border-white/10 flex items-center justify-center text-emerald-500 shadow-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="font-black text-xl text-white tracking-widest uppercase italic">
+                        SHADOW <span class="text-emerald-500 neon-text">NEXUS</span>
+                    </h1>
+                    <div
+                        class="flex items-center gap-2 text-[9px] text-gray-500 font-mono leading-none mt-0.5 tracking-wider">
+                        <span
+                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-[pulse_1s_ease-in-out_infinite]"></span>
+                        SYSTEM ONLINE
+                        <span id="vip-badge"
+                            class="hidden ml-2 px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded text-[8px] border border-amber-500/30">VIP
+                            ACTIVATED</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- 地区切换按钮 -->
+                <div class="flex items-center border border-white/10 rounded-lg overflow-hidden bg-white/5">
+                    <button id="mainland-btn" onclick="switchRegion('mainland')"
+                        class="px-3 py-1.5 text-xs font-mono font-bold transition-all bg-emerald-600/20 text-emerald-400 border-r border-white/10">
+                        🇨🇳 大陆
+                    </button>
+                    <button id="overseas-btn" onclick="switchRegion('overseas')"
+                        class="px-3 py-1.5 text-xs font-mono font-bold transition-all hover:bg-white/10 text-gray-400 hover:text-white">
+                        🌍 海外
+                    </button>
+                </div>
+
+                <button onclick="openCnModal()" id="cn-btn"
+                    class="hidden px-3 py-1.5 bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 rounded-lg text-xs font-mono font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                    <span class="text-sm">🇨🇳</span> CN LINE
+                </button>
+
+                <button onclick="toggleSpeedTestModal()" id="speedtest-btn"
+                    class="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 rounded-lg text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1.5"
+                    title="触发双区域测速">
+                    <span class="text-sm">⚡</span> TEST
+                </button>
+
+                <button onclick="toggleHealthCheckModal()" id="health-check-btn"
+                    class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 rounded-lg text-xs font-mono font-bold text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1.5"
+                    title="检测节点健康状态">
+                    <span class="text-sm">🏥</span> 健康检测
+                </button>
+
+                <button onclick="toggleAuthModal()" id="auth-btn"
+                    class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-mono font-bold text-gray-400 hover:text-white transition-colors">
+                    LOGIN
+                </button>
+
+                <button onclick="fetchData()"
+                    class="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-400 hover:text-emerald-400 transition-colors group"
+                    title="刷新数据">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:animate-spin" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+                <button onclick="copyAll()"
+                    class="hidden md:block px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/30 text-emerald-500 hover:text-emerald-400 rounded-lg text-sm font-bold tracking-wide transition-colors">
+                    COPY ALL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 pt-24">
+        <!-- 同步状态横幅 -->
+        <div class="glass-card rounded-xl p-3 mb-6 border border-white/5 bg-gradient-to-r from-emerald-500/5 to-transparent">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></div>
+                    <div class="text-sm font-mono">
+                        <span class="text-gray-400">数据同步: </span>
+                        <span id="sync-time-display" class="text-emerald-400 font-bold">正在加载...</span>
+                        <span class="text-gray-600 text-xs ml-2">(<span id="nodes-count">0</span>个活跃节点)</span>
+                    </div>
+                </div>
+                <button onclick="triggerPollAndRefresh()" class="px-2 py-1 text-xs text-gray-400 hover:text-gray-300 transition-colors hover:bg-white/5 rounded" title="手动触发同步并刷新显示">
+                    🔄 刷新
+                </button>
+            </div>
+        </div>
+
+        <!-- 质量说明卡片 -->
+        <div class="glass-card rounded-xl p-4 mb-6 border border-white/5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-6 text-xs">
+                    <span class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        <span class="text-gray-400">优质节点 <span class="text-gray-500">(延迟&lt;300ms)</span></span>
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-amber-500 rounded-full"></span>
+                        <span class="text-gray-400">中等节点 <span class="text-gray-500">(延迟&lt;800ms)</span></span>
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-rose-500 rounded-full"></span>
+                        <span class="text-gray-400">较慢节点 <span class="text-gray-500">(延迟&gt;800ms)</span></span>
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs text-gray-500">筛选:</label>
+                    <select id="quality-filter" onchange="filterNodes(this.value)" 
+                        class="bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:border-emerald-500/50 outline-none">
+                        <option value="all">全部节点</option>
+                        <option value="high">仅优质</option>
+                        <option value="medium">中等以上</option>
+                    </select>
+                    <select id="sort-by" onchange="sortNodes(this.value)"
+                        class="bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:border-emerald-500/50 outline-none">
+                        <option value="quality">按质量排序</option>
+                        <option value="speed">按速度排序</option>
+                        <option value="latency">按延迟排序</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex flex-wrap items-center justify-between mb-6 gap-3">
+            <div
+                class="glass-card px-5 py-2 rounded-full flex items-center gap-4 text-xs text-gray-400 shadow-lg overflow-x-auto">
+                <span class="flex items-center gap-2 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    NODES: <strong class="text-white font-mono text-sm" id="node-count">--</strong>
+                </span>
+
+                <span class="w-px h-3 bg-white/10"></span>
+
+                <span class="whitespace-nowrap">STATUS: <strong class="text-emerald-400 font-mono"
+                        id="user-status-text">GUEST</strong></span>
+
+                <span class="w-px h-3 bg-white/10 hidden md:block"></span>
+
+                <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-cyan-400" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    NET I/O: <strong class="text-cyan-400 font-mono" id="monitor-io">0 KB/s</strong>
+                </span>
+
+                <span class="w-px h-3 bg-white/10 hidden md:block"></span>
+
+                <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-amber-400" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    HITS: <strong class="text-amber-400 font-mono" id="monitor-hits">--</strong>
+                </span>
+                
+                <span class="w-px h-3 bg-white/10 hidden md:block"></span>
+                
+                <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    VERIFIED: <strong class="text-emerald-400 font-mono" id="monitor-verified">--</strong>
+                </span>
+
+                <span class="w-px h-3 bg-white/10 hidden md:block"></span>
+
+                <span class="hidden md:flex items-center gap-2 whitespace-nowrap">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    ONLINE: <strong class="text-emerald-400 font-mono" id="monitor-online">1</strong>
+                </span>
+            </div>
+        </div>
+
+        <div id="loading" class="flex flex-col items-center justify-center py-32 space-y-4">
+            <div class="relative w-12 h-12">
+                <div class="absolute inset-0 rounded-full border-2 border-white/5"></div>
+                <div
+                    class="absolute inset-0 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin">
+                </div>
+            </div>
+            <p class="text-gray-500 font-mono text-xs animate-pulse">SECURING CONNECTION...</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="grid"></div>
+
+        <div id="empty-state" class="hidden text-center py-20 text-gray-500">NO SIGNAL DETECTED</div>
+    </main>
+
+    <textarea id="all-links" class="hidden"></textarea>
+
+    <!-- 双区测速模态框 -->
+    <div id="speedtest-modal" class="fixed inset-0 z-[115] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="toggleSpeedTestModal()"></div>
+        <div class="relative glass-card p-6 rounded-2xl w-full max-w-md border border-cyan-500/20 animate-fade-in z-20 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-2 tracking-wide flex items-center gap-2">
+                <span class="text-xl">⚡</span> 双区域测速
+            </h3>
+            <p class="text-xs text-gray-500 font-mono mb-4" id="speedtest-status">准备开始...</p>
+            
+            <div id="speedtest-idle" class="space-y-3">
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    此操作将通过 Aliyun FC（大陆）和 Cloudflare Workers（海外）对所有节点进行双地区测速，预计耗时 <strong>5-10 分钟</strong>。
+                </p>
+                <div class="flex gap-2">
+                    <button onclick="startSpeedTest()" 
+                        class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        开始测速
+                    </button>
+                    <button onclick="toggleSpeedTestModal()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+
+            <div id="speedtest-running" class="hidden space-y-3">
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-gray-400">测速进度</span>
+                        <span class="text-cyan-400 font-mono font-bold" id="speedtest-progress">--</span>
+                    </div>
+                    <div class="h-2 w-full bg-black/40 rounded-full overflow-hidden">
+                        <div id="speedtest-bar" class="h-full bg-cyan-500 w-0 transition-all duration-300"></div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 font-mono space-y-1">
+                    <div>📡 大陆测速: <span id="mainland-status" class="text-gray-400">等待中...</span></div>
+                    <div>🌍 海外测速: <span id="overseas-status" class="text-gray-400">等待中...</span></div>
+                </div>
+                <button onclick="toggleSpeedTestModal()" disabled
+                    class="w-full bg-gray-700/20 text-gray-500 py-2.5 rounded-lg text-sm font-bold cursor-not-allowed">
+                    测速进行中，请等待...
+                </button>
+            </div>
+
+            <div id="speedtest-done" class="hidden space-y-3">
+                <div class="bg-cyan-500/10 border border-cyan-500/30 p-3 rounded-lg">
+                    <p class="text-sm text-cyan-400 font-bold">✅ 测速完成！</p>
+                    <p class="text-xs text-gray-400 mt-1" id="speedtest-result-msg">正在刷新页面...</p>
+                </div>
+                <button onclick="toggleSpeedTestModal()"
+                    class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 健康检测模态框 -->
+    <div id="health-check-modal" class="fixed inset-0 z-[116] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="toggleHealthCheckModal()"></div>
+        <div class="relative glass-card p-6 rounded-2xl w-full max-w-md border border-rose-500/20 animate-fade-in z-20 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-2 tracking-wide flex items-center gap-2">
+                <span class="text-xl">🏥</span> 节点健康检测
+            </h3>
+            <p class="text-xs text-gray-500 font-mono mb-4" id="health-check-status">检测数据库中所有节点的连通性</p>
+            
+            <!-- 统计信息 -->
+            <div id="health-stats" class="grid grid-cols-4 gap-2 mb-4">
+                <div class="bg-white/5 rounded-lg p-2 text-center">
+                    <div class="text-lg font-bold text-white" id="stat-total">--</div>
+                    <div class="text-[10px] text-gray-500">总计</div>
+                </div>
+                <div class="bg-emerald-500/10 rounded-lg p-2 text-center">
+                    <div class="text-lg font-bold text-emerald-400" id="stat-online">--</div>
+                    <div class="text-[10px] text-emerald-500">在线</div>
+                </div>
+                <div class="bg-rose-500/10 rounded-lg p-2 text-center">
+                    <div class="text-lg font-bold text-rose-400" id="stat-offline">--</div>
+                    <div class="text-[10px] text-rose-500">离线</div>
+                </div>
+                <div class="bg-amber-500/10 rounded-lg p-2 text-center">
+                    <div class="text-lg font-bold text-amber-400" id="stat-suspect">--</div>
+                    <div class="text-[10px] text-amber-500">可疑</div>
+                </div>
+            </div>
+            
+            <div id="health-check-idle" class="space-y-3">
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    点击开始检测将对数据库中的节点进行 TCP + HTTP 连通性测试。
+                    <br/>• 每次检测约 50 个节点
+                    <br/>• 失败节点自动重试 2 次
+                    <br/>• 无法连接的节点将被标记为 <span class="text-rose-400">离线</span>
+                </p>
+                <div class="flex gap-2">
+                    <button onclick="startHealthCheck()" id="start-health-check-btn"
+                        class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        开始检测
+                    </button>
+                    <button onclick="toggleHealthCheckModal()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+
+            <div id="health-check-running" class="hidden space-y-3">
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-gray-400">检测进度</span>
+                        <span class="text-rose-400 font-mono font-bold" id="health-check-progress">检测中...</span>
+                    </div>
+                    <div class="h-2 w-full bg-black/40 rounded-full overflow-hidden">
+                        <div id="health-check-bar" class="h-full bg-rose-500 w-0 transition-all duration-300 animate-pulse"></div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 font-mono">
+                    正在检测节点连通性，请稍候...
+                </div>
+            </div>
+
+            <div id="health-check-done" class="hidden space-y-3">
+                <div class="bg-rose-500/10 border border-rose-500/30 p-3 rounded-lg">
+                    <p class="text-sm text-rose-400 font-bold">✅ 检测完成！</p>
+                    <p class="text-xs text-gray-400 mt-1" id="health-check-result-msg">--</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="startHealthCheck()" 
+                        class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        继续检测
+                    </button>
+                    <button onclick="toggleHealthCheckModal()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="qr-modal" class="fixed inset-0 z-[120] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="closeQR()"></div>
+        <div
+            class="relative bg-[#121212] border border-white/10 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 w-[320px] max-w-full animate-fade-in z-10">
+            <h3 class="text-white font-bold tracking-wider" id="qr-title">SCAN CODE</h3>
+            <div id="qrcode"
+                class="bg-white p-2 rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.1)] min-h-[180px] flex items-center justify-center">
+            </div>
+            <p class="text-xs text-gray-600 text-center w-full truncate px-2 font-mono" id="qr-link-preview"></p>
+            <button onclick="closeQR()"
+                class="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 font-medium transition-colors border border-white/5">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="toggleAuthModal()"></div>
+        <div
+            class="relative glass-card p-6 rounded-2xl w-full max-w-sm border border-white/10 animate-fade-in z-20 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-1 tracking-wide">ACCESS CONTROL</h3>
+            <p class="text-xs text-gray-500 font-mono mb-6" id="auth-subtitle">IDENTIFY YOURSELF</p>
+
+            <div id="login-section" class="space-y-3">
+                <input id="email" type="email" placeholder="Email Address"
+                    class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors">
+                <input id="password" type="password" placeholder="Password"
+                    class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors">
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="handleLogin()"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg text-sm font-bold transition-colors shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                        LOGIN
+                    </button>
+                    <button onclick="handleRegister()"
+                        class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 py-2.5 rounded-lg text-sm font-bold transition-colors">
+                        REGISTER
+                    </button>
+                </div>
+            </div>
+
+            <div id="user-section" class="hidden space-y-4">
+                <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                    <div class="text-xs text-gray-400 font-mono">ACCOUNT</div>
+                    <div class="text-sm text-white font-bold truncate" id="current-email">user@example.com</div>
+                    <div class="mt-2 text-xs text-gray-400 font-mono">VIP EXPIRATION</div>
+                    <div class="text-emerald-400 font-mono font-bold" id="vip-date">--</div>
+                </div>
+
+                <div class="pt-2">
+                    <label class="text-xs text-gray-500 font-mono block mb-1.5">REDEEM CODE (卡密)</label>
+                    <div class="flex gap-2">
+                        <input id="kami-code" type="text" placeholder="XXXX-XXXX-XXXX"
+                            class="flex-1 bg-[#0a0a0a] border border-amber-500/30 rounded-lg px-3 py-2 text-sm text-amber-500 focus:border-amber-500 outline-none font-mono">
+                        <button onclick="redeemKami()"
+                            class="px-4 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/50 text-amber-500 rounded-lg text-xs font-bold transition-colors">
+                            ACTIVATE
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="handleLogout()"
+                    class="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 rounded-lg transition-colors">
+                    LOGOUT
+                </button>
+            </div>
+
+            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- 精确测速模态框 -->
+    <div id="precision-test-modal" class="fixed inset-0 z-[108] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="closePrecisionTestModal()"></div>
+        <div class="relative glass-card p-6 rounded-2xl w-full max-w-md border border-purple-500/20 animate-fade-in z-20 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+                    <span class="text-2xl">⚡</span> 精确测速
+                </h3>
+                <button onclick="closePrecisionTestModal()" class="text-gray-500 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="precision-test-content" class="mb-4">
+                <p class="text-sm text-gray-400 mb-3">选择测试文件大小（将消耗对应流量）：</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="selectPrecisionTestSize(10)" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-purple-500/20 text-gray-300 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all">
+                        10 MB
+                    </button>
+                    <button onclick="selectPrecisionTestSize(25)" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-purple-500/20 text-gray-300 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all">
+                        25 MB
+                    </button>
+                    <button onclick="selectPrecisionTestSize(50)" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-purple-500/20 text-gray-300 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all">
+                        50 MB
+                    </button>
+                    <button onclick="selectPrecisionTestSize(100)" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-purple-500/20 text-gray-300 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all">
+                        100 MB
+                    </button>
+                </div>
+            </div>
+
+            <div id="precision-test-confirm" class="hidden">
+                <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-gray-300 mb-3">确认测速参数：</p>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>文件大小:</span>
+                            <span class="text-purple-300" id="confirm-test-size">50 MB</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>预计流量消耗:</span>
+                            <span class="text-purple-300" id="confirm-traffic">50 MB</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>预计耗时:</span>
+                            <span class="text-purple-300">1-30 秒</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-amber-400 mt-3">⚠️ 精确测速会消耗对应流量，请确认后再开始</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="cancelPrecisionTest()" class="py-2 px-3 rounded-lg text-sm bg-white/5 hover:bg-red-500/20 text-gray-300 hover:text-red-400 border border-white/5 hover:border-red-500/30 transition-all">
+                        取消
+                    </button>
+                    <button onclick="confirmPrecisionTest()" class="py-2 px-3 rounded-lg text-sm bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-purple-400 border border-purple-500/30 hover:border-purple-500/50 transition-all font-bold">
+                        确认开始
+                    </button>
+                </div>
+            </div>
+
+            <div id="precision-test-running" class="hidden">
+                <div class="space-y-3">
+                    <p class="text-xs text-gray-400">测试进行中，请稍候...</p>
+                    <div class="w-full h-2 bg-black/40 rounded-full overflow-hidden">
+                        <div id="precision-test-progress-bar" class="h-full bg-purple-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 text-center"><span id="precision-test-progress-text">0%</span></p>
+                </div>
+            </div>
+
+            <div id="precision-test-result" class="hidden">
+                <div class="space-y-3 bg-white/5 p-3 rounded-lg">
+                    <p class="text-sm font-bold text-purple-400" id="precision-test-result-title">测试完成</p>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-500">下载速度</span>
+                            <span class="text-white font-mono" id="precision-test-speed">-- MB/s</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-500">用时</span>
+                            <span class="text-white font-mono" id="precision-test-time">-- s</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-500">流量消耗</span>
+                            <span class="text-white font-mono" id="precision-test-traffic">-- MB</span>
+                        </div>
+                    </div>
+                    <button onclick="closePrecisionTestModal()" class="w-full mt-3 py-2 px-3 rounded-lg text-sm bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 border border-purple-500/30 transition-all">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cn-modal" class="fixed inset-0 z-[105] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 modal-overlay" onclick="closeCnModal()"></div>
+        <div
+            class="relative glass-card p-6 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-red-500/20 animate-fade-in z-20 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+                    <span class="text-2xl">🇨🇳</span> CN DIRECT LINES
+                </h3>
+                <button onclick="closeCnModal()" class="text-gray-500 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="overflow-y-auto pr-2 custom-scrollbar flex-1">
+                <div id="cn-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-white/5 text-center">
+                <p class="text-xs text-gray-500 font-mono">FOR DOMESTIC SERVICES ONLY</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div
+            class="glass-card px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-emerald-500/30 bg-[#050505]/95 backdrop-blur-xl">
+            <div
+                class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-black text-xs font-bold shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                ✓</div>
+            <span class="text-sm font-bold text-white tracking-wide" id="toast-msg">COPIED</span>
+        </div>
+    </div>
+
+    <div id="identity-modal"
+        class="fixed inset-0 bg-black/95 z-[1000] hidden items-center justify-center backdrop-blur-sm">
+        <div
+            class="bg-gray-900 border-2 border-cyan-500 p-6 rounded-xl max-w-sm w-[90%] shadow-[0_0_50px_rgba(6,182,212,0.4)] relative overflow-hidden">
+
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-cyan-500/20 rounded-full blur-xl"></div>
+
+            <h3 class="text-2xl text-cyan-400 font-bold mb-2 flex items-center gap-2">
+                <span>🆔</span> 身份已生成
+            </h3>
+            <p class="text-gray-400 text-xs mb-4 leading-relaxed">
+                系统已为您创建匿名通行证。<br>
+                <span class="text-red-400 font-bold">⚠️ 请务必保存下方信息，这是您找回账号的唯一凭证！</span>
+            </p>
+
+            <div class="bg-black/60 border border-gray-700 rounded-lg p-4 mb-5 font-mono text-sm relative group">
+                <div class="flex justify-between items-center mb-2 border-b border-gray-800 pb-2">
+                    <span class="text-gray-500">账号 (ID)</span>
+                    <span id="new-username" class="text-green-400 font-bold select-all">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500">密码 (Key)</span>
+                    <span id="new-password" class="text-cyan-400 font-bold select-all">Loading...</span>
+                </div>
+                <div id="copy-tip"
+                    class="absolute inset-0 bg-cyan-900/90 flex items-center justify-center text-cyan-200 font-bold opacity-0 transition-opacity pointer-events-none">
+                    已复制到剪贴板!
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="copyIdentity()"
+                    class="w-full border border-cyan-500/50 hover:bg-cyan-500/10 text-cyan-400 py-2.5 rounded transition-colors flex items-center justify-center gap-2">
+                    <span>📋</span> 一键复制 (Copy)
+                </button>
+                <button onclick="downloadIdentity()"
+                    class="w-full border border-green-500/50 hover:bg-green-500/10 text-green-400 py-2.5 rounded transition-colors flex items-center justify-center gap-2">
+                    <span>💾</span> 下载凭证 (.txt)
+                </button>
+                <button onclick="closeIdentityModal()" id="btn-enter"
+                    class="w-full bg-gray-700 text-gray-500 font-bold py-3 rounded cursor-not-allowed mt-2" disabled>
+                    请先保存账号
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // ================= 配置区域 =================
+        const SUPABASE_URL = 'https://hnlkwtkxbqiakeyienok.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhubGt3dGt4YnFpYWtleWllbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MDQwNTksImV4cCI6MjA4MjQ4MDA1OX0.Xg9vQdUfBdUW-IJaomEIRGsX6tB_k2grhrF4dm_aNME';
+
+        // 🔥 改进：优先使用本地 SpiderFlow 后端，然后才是 Cloudflare Tunnel
+        // 本地开发环境：localhost:8002 (viper-node-store FastAPI 后端必须启动)
+        // 云端部署：https://api.996828.xyz (需要在 Vercel 环境变量或 vercel.json 配置)
+        const VIPER_API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8002'
+            : '/api';
+
+        // SpiderFlow 后端 API（通过 viper-node-store 的代理访问）
+        // 本地开发：代理到 localhost:8001
+        // 云端部署：代理通过 /api/proxy 访问线上的 SpiderFlow
+        const SPIDERFLOW_API_BASE = '/api/proxy';
+
+        let supabaseClient;
+        if (typeof supabase !== 'undefined') {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } else {
+            alert('System Error: Supabase SDK failed to load.');
+        }
+
+        const countryMap = { 'CN': '回国', 'HK': '香港', 'TW': '台湾', 'JP': '日本', 'KR': '韩国', 'SG': '新加坡', 'US': '美国', 'GB': '英国', 'DE': '德国', 'FR': '法国', 'NL': '荷兰', 'RU': '俄罗斯', 'CA': '加拿大', 'AU': '澳大利亚', 'IN': '印度', 'BR': '巴西', 'UNK': '未知' };
+        let globalCnNodes = [];
+        let globalNormalNodes = []; // 缓存普通节点用于筛选
+        
+        // ================= 地区切换状态 =================
+        let currentRegion = 'mainland'; // 默认大陆
+        let allRegionData = {
+            mainland: [],     // 大陆节点（有mainland_score或基础大陆节点）
+            overseas: []      // 海外节点（有overseas_score或基础海外节点）
+        };
+
+        // ================= 地区切换函数 =================
+        function switchRegion(region) {
+            currentRegion = region;
+            
+            // 更新按钮样式
+            const mainlandBtn = document.getElementById('mainland-btn');
+            const overseasBtn = document.getElementById('overseas-btn');
+            
+            if (region === 'mainland') {
+                mainlandBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all bg-emerald-600/20 text-emerald-400 border-r border-white/10';
+                overseasBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all hover:bg-white/10 text-gray-400 hover:text-white';
+            } else {
+                mainlandBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all hover:bg-white/10 text-gray-400 hover:text-white border-r border-white/10';
+                overseasBtn.className = 'px-3 py-1.5 text-xs font-mono font-bold transition-all bg-emerald-600/20 text-emerald-400';
+            }
+            
+            // 重新渲染数据 - 使用当前分类的存储数据
+            const grid = document.getElementById('grid');
+            const empty = document.getElementById('empty-state');
+            
+            const nodesToDisplay = allRegionData[region] || [];
+            
+            if (nodesToDisplay.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                empty.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-gray-400 text-sm">暂无${region === 'mainland' ? '大陆' : '海外'}节点数据</p>
+                        <p class="text-gray-500 text-xs mt-2">请稍候，或检查数据源</p>
+                    </div>
+                `;
+            } else {
+                empty.classList.add('hidden');
+                // 保存到全局节点列表，以便筛选和排序使用
+                globalNormalNodes = nodesToDisplay;
+                updateStats(nodesToDisplay);
+                renderNodes(nodesToDisplay);
+            }
+        }
+
+        // 启动程序
+        (async () => {
+            await fetchData();
+            // fetchData完成后立即获取同步信息
+            fetchSyncInfo();
+        })();
+        
+        initTelemetry(); // 启动监控遥测
+
+        // ================= 核心功能函数 =================
+
+        // 1. [关键修复] 获取 VIP 状态
+        async function getVipStatus() {
+            if (!supabaseClient) return { user: null, isVip: false };
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) return { user: null, isVip: false };
+
+                // 🔥 [修复点] 将 .single() 改为 .maybeSingle()
+                // 解释：新用户(QuickStart)在profiles表里可能还没数据。
+                // .single() 没找到会报 406 错误，.maybeSingle() 没找到会返回 null (视为普通用户)，不会报错。
+                const { data } = await supabaseClient
+                    .from('profiles')
+                    .select('vip_until')
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                const isVip = data?.vip_until && new Date(data.vip_until) > new Date();
+                return { user, isVip, vipDate: data?.vip_until };
+            } catch (e) {
+                console.warn("VIP check failed:", e); // 仅警告，不阻断流程
+                return { user: null, isVip: false };
+            }
+        }
+
+        // 1.5. 刷新节点列表的便捷函数
+        function fetchNodes() {
+            fetchData();
+        }
+
+        // 2. 获取节点数据 (支持地区切换)
+        async function fetchData() {
+            const loading = document.getElementById('loading');
+            const grid = document.getElementById('grid');
+            const empty = document.getElementById('empty-state');
+            const cnBtn = document.getElementById('cn-btn');
+
+            loading.classList.remove('hidden');
+            grid.innerHTML = '';
+            empty.classList.add('hidden');
+            cnBtn.classList.add('hidden');
+
+            try {
+                // A. 身份检查
+                const { user, isVip, vipDate } = await getVipStatus();
+                updateAuthUI(user, isVip, vipDate);
+
+                // B. 从后端 SpiderFlow 直接获取节点数据
+                const response = await fetch(`${VIPER_API_BASE}/api/nodes?limit=500`, {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error('Proxy error:', response.status, errorData);
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const rawNodes = await response.json();
+                if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
+                    // 节点正在检测中，显示友好消息而不是抛出错误
+                    empty.classList.remove('hidden');
+                    empty.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full">
+                            <div class="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4 animate-pulse">
+                                <span class="text-4xl">⏳</span>
+                            </div>
+                            <p class="text-gray-400 text-lg font-semibold mb-2">节点检测中...</p>
+                            <p class="text-gray-500 text-sm max-w-md text-center">
+                                后端正在抓取和验证节点，这通常需要 2-5 分钟<br/>
+                                请稍候并刷新页面查看最新节点
+                            </p>
+                            <button onclick="fetchNodes()" class="mt-6 px-6 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg transition-colors">
+                                🔄 刷新
+                            </button>
+                        </div>
+                    `;
+                    loading.classList.add('hidden');
+                    return;
+                }
+
+                // 解析节点内容
+                const allNodes = rawNodes.map(item => {
+                    try {
+                        // 安全地解析 nodeContent
+                        let nodeContent = {};
+                        if (item.content) {
+                            if (typeof item.content === 'string') {
+                                try {
+                                    nodeContent = JSON.parse(item.content);
+                                } catch (parseErr) {
+                                    console.warn('Failed to parse item.content:', parseErr);
+                                    nodeContent = {};
+                                }
+                            } else if (typeof item.content === 'object') {
+                                nodeContent = item.content;
+                            }
+                        }
+                        
+                        return {
+                            // 保留原始 item 的所有字段，然后合并 nodeContent
+                            ...item,
+                            // 确保 nodeContent 中的字段被合并，但 item 的优先级更高（特别是 link）
+                            ...(nodeContent || {}),
+                            // 再次显式保证这些关键字段使用 item 中的值
+                            link: item.link || (nodeContent?.subscribe_link) || '',
+                            // 添加测试数据字段（从 Supabase 直接取，或从 SpiderFlow 后端获取）
+                            speed: item.speed || 0,
+                            latency: item.latency || 0,
+                            is_free: item.is_free || false,
+                            mainland_score: item.mainland_score || 0,
+                            mainland_latency: item.mainland_latency || 0,
+                            overseas_score: item.overseas_score || 0,
+                            overseas_latency: item.overseas_latency || 0
+                        };
+                    } catch (e) {
+                        console.error('Failed to parse node:', e);
+                        return null;
+                    }
+                }).filter(n => n !== null);
+
+                // C. 精确分类节点（优先用分数，没有分数就用 alive 状态）
+                
+                // 提取 CN 国家的节点（country === 'CN'）
+                const cnAllNodes = allNodes.filter(n => n.country === 'CN');
+                
+                // 非 CN 的节点
+                const nonCnNodes = allNodes.filter(n => n.country !== 'CN');
+                
+                // 大陆节点 = 有mainland_score的节点 或 活着的节点（直接用基础检测结果）
+                let mainlandNodes = nonCnNodes.filter(n => {
+                    // 优先用分数数据（Aliyun FC 测速结果）
+                    if (typeof n.mainland_score === 'number' && n.mainland_score > 0) {
+                        return true;
+                    }
+                    // 没有分数，就用基础活节点
+                    return n.alive === true || n.available === true;
+                });
+
+                // 海外节点 = 有overseas_score的节点 或 活着的节点
+                let overseasNodes = nonCnNodes.filter(n => {
+                    // 优先用分数数据（Cloudflare 测速结果）
+                    if (typeof n.overseas_score === 'number' && n.overseas_score > 0) {
+                        return true;
+                    }
+                    // 没有分数，就用基础活节点
+                    return n.alive === true || n.available === true;
+                });
+
+                // 如果大陆和海外都没有节点，就都用所有活节点（兜底）
+                if (mainlandNodes.length === 0 && overseasNodes.length === 0) {
+                    const aliveNodes = nonCnNodes.filter(n => n.alive === true || n.available === true);
+                    if (aliveNodes.length > 0) {
+                        mainlandNodes = aliveNodes.slice(0, Math.ceil(aliveNodes.length / 2));
+                        overseasNodes = aliveNodes.slice(Math.ceil(aliveNodes.length / 2));
+                    }
+                }
+                
+                // D. 权限过滤
+                let filteredMainland = mainlandNodes;
+                let filteredOverseas = overseasNodes;
+                
+                if (!isVip) {
+                    filteredMainland = filteredMainland.slice(0, 20);
+                    filteredOverseas = filteredOverseas.slice(0, 20);
+                }
+
+                // E. 保存到全局变量（确保大陆和海外分开）
+                allRegionData.mainland = filteredMainland;
+                allRegionData.overseas = filteredOverseas;
+                
+                // 保存所有节点数据到 window.nodesData，用于精准测速时查找节点对象
+                window.nodesData = allNodes;
+                
+                // F. CN 回国节点（单独提取，只在弹窗显示）
+                globalCnNodes = cnAllNodes.filter(n => n.alive === true || n.available === true).slice(0, isVip ? 50 : 10);
+                
+                // G. 默认显示：严格按分数显示；若没有当前区域分数但有部分已测节点，则显示快照
+                const scoredNodes = allNodes.filter(n => (typeof n.mainland_score === 'number' && n.mainland_score > 0) || (typeof n.overseas_score === 'number' && n.overseas_score > 0));
+
+// G. 显示逻辑：有分数或有基础数据就显示
+                if (filteredMainland.length > 0 || filteredOverseas.length > 0) {
+                    // 有节点数据（分数或基础），显示对应分类
+                    empty.classList.add('hidden');
+                    updateStats(allRegionData[currentRegion]);
+                    renderNodes(allRegionData[currentRegion]);
+                } else {
+                    // 没有任何节点数据
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    document.getElementById('empty-state').innerHTML = `
+                        <div class="text-center">
+                            <p class="text-gray-400 text-sm">⏳ 节点检测中...</p>
+                            <p class="text-gray-500 text-xs mt-2">后端正在获取和验证节点，请稍候</p>
+                        </div>
+                    `;
+                }
+
+                // H. 显示或隐藏 CN 弹窗按钮（有 CN 节点就显示）
+                if (globalCnNodes.length > 0) {
+                    cnBtn.classList.remove('hidden');
+                } else {
+                    cnBtn.classList.add('hidden');
+                }
+                loading.classList.add('hidden');
+                
+                // 重置筛选器
+                document.getElementById('quality-filter').value = 'all';
+                document.getElementById('sort-by').value = 'quality';
+
+            } catch (err) {
+                console.error(err);
+                empty.classList.remove('hidden');
+                empty.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full">
+                        <div class="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                            <span class="text-4xl">❌</span>
+                        </div>
+                        <p class="text-red-400 text-lg font-semibold mb-2">连接失败</p>
+                        <p class="text-gray-500 text-sm max-w-md text-center mb-4">
+                            ${err.message}
+                        </p>
+                        <button onclick="fetchNodes()" class="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors">
+                            🔄 重试
+                        </button>
+                    </div>
+                `;
+                loading.classList.add('hidden');
+            }
+        }
+
+        // ================= 📡 实时监控遥测逻辑 =================
+        let lastBytesTotal = 0;
+        let lastCheckTime = 0;
+        let telemetryInterval = null;
+
+        async function initTelemetry() {
+            // 🔥 性能优化：将轮询频率从 3秒 改为 10秒，减少网络请求
+            if (telemetryInterval) clearInterval(telemetryInterval);
+            telemetryInterval = setInterval(updateMonitorStats, 10000);
+            updateMonitorStats(); // 立即执行一次
+        }
+
+        async function updateMonitorStats() {
+            try {
+                // 🔥 修复：这些统计数据来自 SpiderFlow 后端，不是 viper-node-store
+                const sysRes = await fetch(`${SPIDERFLOW_API_BASE}/api/system/stats`, {
+                    signal: AbortSignal.timeout(5000) // 5秒超时，避免长时间挂起
+                });
+                if (sysRes.ok) {
+                    const sysData = await sysRes.json();
+                    if (sysData.network) {
+                        const currentTotal = (sysData.network.bytes_sent || 0) + (sysData.network.bytes_recv || 0);
+                        const now = Date.now();
+
+                        // 计算速度 (Throughput)
+                        if (lastBytesTotal > 0 && lastCheckTime > 0) {
+                            const deltaBytes = currentTotal - lastBytesTotal;
+                            const deltaTime = (now - lastCheckTime) / 1000;
+                            if (deltaTime > 0) {
+                                const speedBps = deltaBytes / deltaTime;
+                                document.getElementById('monitor-io').innerText = formatSpeed(speedBps);
+                            }
+                        }
+
+                        lastBytesTotal = currentTotal;
+                        lastCheckTime = now;
+                    }
+                }
+
+                // 🔥 访客统计也来自 SpiderFlow
+                const visitRes = await fetch(`${SPIDERFLOW_API_BASE}/api/visitors/stats`);
+                if (visitRes.ok) {
+                    const visitData = await visitRes.json();
+                    if (visitData.total_visitors !== undefined) {
+                        document.getElementById('monitor-hits').innerText = visitData.total_visitors.toLocaleString();
+                    }
+                    // 更新当前在线人数
+                    if (visitData.online_count !== undefined) {
+                        document.getElementById('monitor-online').innerText = visitData.online_count;
+                    }
+                }
+
+            } catch (e) {
+                // 静默失败，不影响主业务
+                // console.warn("[Telemetry] Fetch failed:", e);
+            }
+        }
+
+        function formatSpeed(bytesPerSec) {
+            if (bytesPerSec < 1024) return bytesPerSec.toFixed(0) + " B/s";
+            if (bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + " KB/s";
+            return (bytesPerSec / (1024 * 1024)).toFixed(2) + " MB/s";
+        }
+
+        // ================= UI 更新逻辑 =================
+        function updateAuthUI(user, isVip, vipDate) {
+            const loginSection = document.getElementById('login-section');
+            const userSection = document.getElementById('user-section');
+            const authBtn = document.getElementById('auth-btn');
+            const statusText = document.getElementById('user-status-text');
+            const vipBadge = document.getElementById('vip-badge');
+            const subtitle = document.getElementById('auth-subtitle');
+
+            if (user) {
+                loginSection.classList.add('hidden');
+                userSection.classList.remove('hidden');
+                document.getElementById('current-email').innerText = user.email;
+                if (isVip) {
+                    statusText.innerText = "VIP MEMBER";
+                    statusText.className = "text-amber-400 font-mono";
+                    vipBadge.classList.remove('hidden');
+                    document.getElementById('vip-date').innerText = new Date(vipDate).toLocaleDateString();
+                    authBtn.innerText = "VIP";
+                    authBtn.className = "px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 rounded-lg text-xs font-mono font-bold text-amber-500 transition-colors";
+                } else {
+                    statusText.innerText = "FREE USER";
+                    statusText.className = "text-gray-400 font-mono";
+                    vipBadge.classList.add('hidden');
+                    document.getElementById('vip-date').innerText = "NOT ACTIVE";
+                    authBtn.innerText = "ACCOUNT";
+                }
+                subtitle.innerText = "WELCOME BACK, OPERATOR";
+            } else {
+                loginSection.classList.remove('hidden');
+                userSection.classList.add('hidden');
+                statusText.innerText = "GUEST (PREVIEW)";
+                vipBadge.classList.add('hidden');
+                authBtn.innerText = "LOGIN";
+                subtitle.innerText = "IDENTIFY YOURSELF";
+            }
+        }
+
+        // 渲染节点卡片
+        // ================= 节点渲染与显示 =================
+        
+        // 🔥 性能优化：分批渲染大量节点，避免一次性渲染导致卡顿
+        const RENDER_BATCH_SIZE = 50; // 首屏渲染50个
+        let allNodesToRender = [];
+        let renderedCount = 0;
+        
+        function renderNodes(data) {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            renderedCount = 0;
+            
+            if (data.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+            
+            document.getElementById('empty-state').classList.add('hidden');
+            allNodesToRender = data;
+            
+            // 首屏渲染前50个节点
+            const firstBatch = data.slice(0, RENDER_BATCH_SIZE);
+            firstBatch.forEach((node, index) => {
+                grid.appendChild(createNodeCard(node, index));
+            });
+            renderedCount = firstBatch.length;
+            
+            // 如果还有更多节点，添加"加载更多"按钮
+            if (data.length > RENDER_BATCH_SIZE) {
+                const loadMoreBtn = document.createElement('div');
+                loadMoreBtn.id = 'load-more-container';
+                loadMoreBtn.className = 'col-span-full flex justify-center py-6';
+                loadMoreBtn.innerHTML = `
+                    <button onclick="loadMoreNodes()" class="px-6 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-bold transition-colors">
+                        加载更多 (${data.length - RENDER_BATCH_SIZE} 个)
+                    </button>
+                `;
+                grid.appendChild(loadMoreBtn);
+            }
+        }
+        
+        function loadMoreNodes() {
+            const grid = document.getElementById('grid');
+            const loadMoreContainer = document.getElementById('load-more-container');
+            
+            // 移除加载更多按钮
+            if (loadMoreContainer) {
+                loadMoreContainer.remove();
+            }
+            
+            // 渲染剩余节点
+            const remainingNodes = allNodesToRender.slice(renderedCount);
+            remainingNodes.forEach((node, index) => {
+                grid.appendChild(createNodeCard(node, renderedCount + index));
+            });
+            renderedCount = allNodesToRender.length;
+        }
+        
+        function renderCnNodes() {
+            const grid = document.getElementById('cn-grid');
+            grid.innerHTML = '';
+            globalCnNodes.forEach((node, index) => {
+                grid.appendChild(createNodeCard(node, index));
+            });
+        }
+      function createNodeCard(node, index) {
+            // 🔥 性能优化：只对前20个节点添加动画延迟，后续节点立即显示
+            const delay = index < 20 ? Math.min(index * 20, 400) : 0;
+            const cnName = countryMap[node.country] || node.country || '境外';
+
+            // 0. 检查节点健康状态 (优先级最高)
+            const healthStatus = node.status || 'unknown';
+            const isOffline = healthStatus === 'offline';
+            const isSuspect = healthStatus === 'suspect';
+
+            // 1. 获取基础数据 (这里只定义一次，防止报错)
+            const latency = node.latency || node.latency_ms || 0;
+            const successRate = node.success_rate || 100;
+
+            // 2. 修正速度显示 (强制限制在 100MB/s 以内，保留1位小数)
+            const rawSpeed = node.speed || 0;
+            const displaySpeed = Math.min(rawSpeed, 100).toFixed(1);
+
+            // 3. 计算质量评分 (如果没有后端评分，进行前端估算)
+            let qualityScore = node.quality_score;
+            if (qualityScore === undefined || qualityScore === null) {
+                if (rawSpeed >= 10) qualityScore = 80;
+                else if (rawSpeed >= 5) qualityScore = 60;
+                else if (rawSpeed >= 2) qualityScore = 40;
+                else qualityScore = 20;
+            }
+
+            // 4. 样式状态判定
+            let speedColor = 'text-gray-500', barColor = 'bg-gray-700', glowClass = '', statusBadge = '';
+            let cardExtraClass = '';
+            let offlineBadge = '';
+
+            // 离线状态优先显示
+            if (isOffline) {
+                speedColor = 'text-gray-600';
+                barColor = 'bg-gray-700';
+                cardExtraClass = 'opacity-60 grayscale-[30%]';
+                statusBadge = '<span class="absolute top-2 right-2 px-1.5 py-0.5 bg-rose-900/80 text-rose-300 text-[8px] font-mono rounded">OFFLINE</span>';
+                offlineBadge = '<span class="absolute top-2 left-2 w-2 h-2 bg-rose-500 rounded-full"></span>';
+            } else if (isSuspect) {
+                speedColor = 'text-amber-500';
+                barColor = 'bg-amber-600';
+                cardExtraClass = 'opacity-80';
+                statusBadge = '<span class="absolute top-2 right-2 px-1.5 py-0.5 bg-amber-900/80 text-amber-300 text-[8px] font-mono rounded">SUSPECT</span>';
+            } else if (qualityScore >= 70) {
+                speedColor = 'text-emerald-400';
+                barColor = 'bg-emerald-500';
+                glowClass = 'shadow-[0_0_8px_rgba(16,185,129,0.4)]';
+                statusBadge = '<span class="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>';
+            } else if (qualityScore >= 40) {
+                speedColor = 'text-amber-400';
+                barColor = 'bg-amber-500';
+                statusBadge = '<span class="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full"></span>';
+            } else if (qualityScore > 0) {
+                speedColor = 'text-rose-400';
+                barColor = 'bg-rose-500';
+                statusBadge = '<span class="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full"></span>';
+            }
+
+            // 5. 延迟显示文本
+            const latencyText = latency > 0 ? `${Math.round(latency)}ms` : '--';
+            const latencyColor = latency > 0 ? (latency < 300 ? 'text-emerald-400' : latency < 800 ? 'text-amber-400' : 'text-rose-400') : 'text-gray-500';
+
+            const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-');
+
+            const card = document.createElement('div');
+            card.className = `glass-card rounded-xl p-4 relative group hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-[180px] animate-fade-in hover:shadow-lg hover:shadow-emerald-900/10 ${cardExtraClass}`;
+            card.style.animationDelay = `${delay}ms`;
+            card.id = nodeId;
+
+            // 6. 组装 HTML
+            card.innerHTML = `
+                ${statusBadge}
+                ${offlineBadge}
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-2xl filter drop-shadow-md">${getFlagEmoji(node.country)}</span>
+                        <div>
+                            <h3 class="font-bold text-gray-200 text-sm w-28 truncate group-hover:text-emerald-400 transition-colors" title="${node.name}">${cnName}</h3>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="text-[10px] font-mono bg-white/10 px-1.5 py-0.5 rounded text-gray-400 uppercase tracking-wider">${node.protocol}</span>
+                                ${successRate < 100 ? `<span class="text-[9px] font-mono ${successRate >= 80 ? 'text-emerald-500' : 'text-amber-500'}">${successRate}%</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono text-xs font-bold ${speedColor}">${displaySpeed} <span class="text-[9px] opacity-70">MB/s</span></div>
+                        <div class="font-mono text-[10px] ${latencyColor} flex items-center justify-end gap-1" id="${nodeId}-latency" title="Server-side Latency (US)">
+                            <span class="opacity-50 text-[8px]">⚡</span>
+                            ${latencyText}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-[10px] text-gray-500 font-mono truncate mb-2 flex items-center gap-1.5 px-1 border-l-2 border-white/5 pl-2 ml-1">${node.host}:${node.port}</div>
+                <div class="h-1.5 w-full bg-black/40 rounded-full overflow-hidden mb-auto">
+                    <div class="h-full ${barColor} ${glowClass} transition-all duration-700" style="width: ${Math.min(qualityScore, 100)}%"></div>
+                </div>
+                <div class="grid grid-cols-4 gap-2 mt-3">
+                    <button onclick="copyLink('${node.link}')" class="col-span-2 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] tracking-wide">COPY</button>
+                    <button onclick="openPrecisionTestModal('${node.link}', '${cnName}')" class="col-span-1 py-1.5 rounded-lg text-xs flex items-center justify-center bg-white/5 hover:bg-purple-500/20 text-gray-400 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 transition-all active:scale-[0.98]" title="精确测速">⚡</button>
+                    <button onclick="showQR('${node.link}', '${cnName} ${node.protocol}')" class="col-span-1 py-1.5 rounded-lg text-xs flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/5 transition-all active:scale-[0.98]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                    </button>
+                </div>
+            `;
+            return card;
+        }
+        
+        // ================= 筛选与排序功能 =================
+        
+        // 统一的质量评分计算函数
+        function getNodeQualityScore(n) {
+            if (n.quality_score !== undefined && n.quality_score !== null) return n.quality_score;
+            const speed = n.speed || 0;
+            if (speed >= 10) return 80;
+            if (speed >= 5) return 60;
+            if (speed >= 2) return 40;
+            return 20;
+        }
+        
+        function filterNodes(quality) {
+            let filtered = [...globalNormalNodes];
+            
+            if (quality === 'high') {
+                filtered = filtered.filter(n => getNodeQualityScore(n) >= 70);
+            } else if (quality === 'medium') {
+                filtered = filtered.filter(n => getNodeQualityScore(n) >= 40);
+            }
+            
+            // 应用当前排序
+            const sortBy = document.getElementById('sort-by').value;
+            filtered = applySorting(filtered, sortBy);
+            
+            renderNodes(filtered);
+            showToast(`显示 ${filtered.length} 个节点`);
+        }
+        
+        function sortNodes(sortBy) {
+            // 获取当前筛选后的节点
+            const qualityFilter = document.getElementById('quality-filter').value;
+            let filtered = [...globalNormalNodes];
+            
+            if (qualityFilter === 'high') {
+                filtered = filtered.filter(n => getNodeQualityScore(n) >= 70);
+            } else if (qualityFilter === 'medium') {
+                filtered = filtered.filter(n => getNodeQualityScore(n) >= 40);
+            }
+            
+            filtered = applySorting(filtered, sortBy);
+            renderNodes(filtered);
+        }
+        
+        function applySorting(nodes, sortBy) {
+            const sorted = [...nodes];
+            
+            switch (sortBy) {
+                case 'speed':
+                    sorted.sort((a, b) => (b.speed || 0) - (a.speed || 0));
+                    break;
+                case 'latency':
+                    // 延迟越低越好，无延迟数据的排后面
+                    sorted.sort((a, b) => {
+                        const la = (a.latency || a.latency_ms) || 9999;
+                        const lb = (b.latency || b.latency_ms) || 9999;
+                        return la - lb;
+                    });
+                    break;
+                case 'quality':
+                default:
+                    sorted.sort((a, b) => getNodeQualityScore(b) - getNodeQualityScore(a));
+                    break;
+            }
+            
+            return sorted;
+        }
+
+        // 辅助功能
+        function updateStats(data) {
+            document.getElementById('node-count').innerText = data.length;
+            document.getElementById('all-links').value = data.map(n => n.link).join('\n');
+            
+            // 统计已验证节点 (有延迟数据的)
+            const verifiedCount = data.filter(n => n.latency_ms && n.latency_ms > 0).length;
+            const verifiedEl = document.getElementById('monitor-verified');
+            if (verifiedEl) {
+                if (verifiedCount > 0) {
+                    verifiedEl.innerText = `${verifiedCount}/${data.length}`;
+                } else {
+                    // 没有服务端测试数据时，显示待测试
+                    verifiedEl.innerText = '待测试';
+                    verifiedEl.className = 'text-gray-400 font-mono';
+                }
+            }
+            
+            // 计算质量分数 (与 createNodeCard 逻辑一致)
+            const getQualityScore = (n) => {
+                if (n.quality_score !== undefined && n.quality_score !== null) return n.quality_score;
+                const speed = n.speed || 0;
+                if (speed >= 10) return 80;
+                if (speed >= 5) return 60;
+                if (speed >= 2) return 40;
+                return 20;
+            };
+            
+            // 统计质量分布
+            const highQuality = data.filter(n => getQualityScore(n) >= 70).length;
+            const mediumQuality = data.filter(n => getQualityScore(n) >= 40 && getQualityScore(n) < 70).length;
+            console.log(`[Stats] 节点质量: 优质${highQuality} 中等${mediumQuality} 一般${data.length - highQuality - mediumQuality}`);
+        }
+        function getFlagEmoji(code) {
+            if (!code || code === 'UNK') return '🌐';
+            const codePoints = code.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
+            return String.fromCodePoint(...codePoints);
+        }
+        function copyLink(text) { navigator.clipboard.writeText(text).then(() => showToast('LINK COPIED')); }
+        function copyAll() { navigator.clipboard.writeText(document.getElementById("all-links").value).then(() => showToast(`ALL NODES COPIED`)); }
+
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 2000);
+        }
+
+        // ================= 交互与弹窗 =================
+        function toggleAuthModal() {
+            const modal = document.getElementById('auth-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) checkUserStatus();
+        }
+        function openCnModal() { renderCnNodes(); document.getElementById('cn-modal').classList.remove('hidden'); }
+        function closeCnModal() { document.getElementById('cn-modal').classList.add('hidden'); }
+        function closeQR() { document.getElementById('qr-modal').classList.add('hidden'); }
+
+        const qrContainer = document.getElementById('qrcode');
+        function showQR(link, title) {
+            document.getElementById('qr-title').innerText = title;
+            document.getElementById('qr-link-preview').innerText = link;
+            qrContainer.innerHTML = '';
+            document.getElementById('qr-modal').classList.remove('hidden');
+            try {
+                new QRCode(qrContainer, { text: link, width: 280, height: 280, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L, quietZone: 2, quietZoneColor: '#ffffff' });
+            } catch (e) { console.error(e); }
+        }
+
+        // ================= 精确测速逻辑 =================
+        let currentTestNode = { link: '', name: '', nodeObject: null };
+        let selectedTestSize = 0;
+
+        function openPrecisionTestModal(link, nodeName) {
+            // 在全局数据中查找节点对象
+            let nodeObject = null;
+            if (window.nodesData) {
+                nodeObject = window.nodesData.find(n => n.link === link);
+            }
+            if (!nodeObject && window.globalCnNodes) {
+                nodeObject = window.globalCnNodes.find(n => n.link === link);
+            }
+            
+            console.log('===== 打开精准测速弹框 =====');
+            console.log('节点名称:', nodeName);
+            console.log('节点link:', link);
+            console.log('找到的节点对象:', nodeObject);
+            if (nodeObject) {
+                console.log('节点host:', nodeObject.host);
+                console.log('节点port:', nodeObject.port);
+                console.log('节点当前速度:', nodeObject.speed);
+            }
+            
+            currentTestNode = { link, name: nodeName, nodeObject };
+            selectedTestSize = 0;
+            document.getElementById('precision-test-modal').classList.remove('hidden');
+            // 重置 UI 到文件大小选择
+            document.getElementById('precision-test-content').classList.remove('hidden');
+            document.getElementById('precision-test-confirm').classList.add('hidden');
+            document.getElementById('precision-test-running').classList.add('hidden');
+            document.getElementById('precision-test-result').classList.add('hidden');
+        }
+
+        function closePrecisionTestModal() {
+            document.getElementById('precision-test-modal').classList.add('hidden');
+            selectedTestSize = 0;
+        }
+
+        function selectPrecisionTestSize(sizeInMb) {
+            selectedTestSize = sizeInMb;
+            // 显示确认界面
+            document.getElementById('precision-test-content').classList.add('hidden');
+            document.getElementById('precision-test-confirm').classList.remove('hidden');
+            document.getElementById('precision-test-running').classList.add('hidden');
+            document.getElementById('precision-test-result').classList.add('hidden');
+            
+            // 更新确认信息
+            document.getElementById('confirm-test-size').innerText = `${sizeInMb} MB`;
+            document.getElementById('confirm-traffic').innerText = `${sizeInMb} MB`;
+        }
+
+        function cancelPrecisionTest() {
+            // 返回文件大小选择
+            document.getElementById('precision-test-content').classList.remove('hidden');
+            document.getElementById('precision-test-confirm').classList.add('hidden');
+            selectedTestSize = 0;
+        }
+
+        function confirmPrecisionTest() {
+            if (selectedTestSize > 0) {
+                startPrecisionTest(selectedTestSize);
+            }
+        }
+
+        let progressInterval = null;
+        let currentProgress = 0;
+
+        async function startPrecisionTest(fileSizeMs) {
+            document.getElementById('precision-test-confirm').classList.add('hidden');
+            document.getElementById('precision-test-running').classList.remove('hidden');
+            document.getElementById('precision-test-result').classList.add('hidden');
+            
+            // 重置进度条
+            currentProgress = 0;
+            updateProgressBar(0);
+            
+            // 启动模拟进度条（平滑增长到 95%）
+            startProgressSimulation();
+            
+            try {
+                console.log(`开始精确测速 | 节点: ${currentTestNode.name} | 文件大小: ${fileSizeMs}MB`);
+                
+                // 构建代理URL：优先使用link，否则基于host:port生成
+                let proxyUrl = currentTestNode.link;
+                if (!proxyUrl || proxyUrl.trim() === '') {
+                    const protocol = currentTestNode.protocol || 'socks5';
+                    proxyUrl = `${protocol}://${currentTestNode.host}:${currentTestNode.port}`;
+                    console.log('✅ 自动构建代理URL:', proxyUrl);
+                }
+                
+                console.log('使用的代理URL:', proxyUrl);
+                
+                // 调用后端 API
+                const response = await fetch(`${VIPER_API_BASE}/api/nodes/precision-test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        proxy_url: proxyUrl,
+                        test_file_size: fileSizeMs
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('精确测速结果:', data);
+
+                // 停止模拟进度，设置为 100%
+                stopProgressSimulation();
+                updateProgressBar(100);
+                
+                // 短暂延迟后显示结果
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // 显示结果
+                showPrecisionTestResult(data);
+                
+            } catch (error) {
+                console.error('精确测速失败:', error);
+                stopProgressSimulation();
+                showPrecisionTestResult({
+                    status: 'error',
+                    speed_mbps: 0,
+                    message: `测速失败: ${error.message}`
+                });
+            }
+        }
+
+        function startProgressSimulation() {
+            // 清除之前的定时器
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+            
+            currentProgress = 0;
+            
+            // 每 150ms 增加进度
+            progressInterval = setInterval(() => {
+                if (currentProgress < 95) {
+                    // 使用非线性增长，开始快，后面慢
+                    const increment = Math.max(0.5, (95 - currentProgress) / 20);
+                    currentProgress = Math.min(95, currentProgress + increment);
+                    updateProgressBar(Math.floor(currentProgress));
+                }
+            }, 150);
+        }
+
+        function stopProgressSimulation() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+
+        function updateProgressBar(percent) {
+            const progressBar = document.querySelector('#precision-test-running .bg-purple-600');
+            const progressText = document.querySelector('#precision-test-running .text-center');
+            
+            if (progressBar) {
+                progressBar.style.width = percent + '%';
+            }
+            if (progressText) {
+                progressText.textContent = percent + '%';
+            }
+        }
+
+        function showPrecisionTestResult(result) {
+            document.getElementById('precision-test-running').classList.add('hidden');
+            document.getElementById('precision-test-result').classList.remove('hidden');
+            
+            if (result.status === 'success' || result.status === 'partial_success') {
+                document.getElementById('precision-test-result-title').innerText = `✅ ${result.message}`;
+                document.getElementById('precision-test-speed').innerText = `${result.speed_mbps} MB/s`;
+                document.getElementById('precision-test-time').innerText = `${result.download_time_seconds}s`;
+                document.getElementById('precision-test-traffic').innerText = `${result.traffic_consumed_mb}MB`;
+                
+                console.log('===== 测速完成，准备更新UI =====');
+                console.log('测速结果速度:', result.speed_mbps, 'MB/s');
+                console.log('currentTestNode:', currentTestNode);
+                
+                // 立即更新节点数据和卡片显示
+                if (currentTestNode.nodeObject) {
+                    console.log('更新前 - 节点对象速度:', currentTestNode.nodeObject.speed);
+                    currentTestNode.nodeObject.speed = result.speed_mbps;
+                    console.log('更新后 - 节点对象速度:', currentTestNode.nodeObject.speed);
+                    
+                    // 直接更新DOM
+                    updateNodeCardUI(currentTestNode.nodeObject);
+                    
+                    // 立即进行延迟测速（不等待用户关闭弹框）
+                    console.log('开始自动延迟测速...');
+                    testLatency(currentTestNode.link, currentTestNode.name);
+                } else {
+                    console.error('❌ currentTestNode.nodeObject 为空，无法更新');
+                }
+            } else {
+                document.getElementById('precision-test-result-title').innerText = `❌ 测速失败`;
+                document.getElementById('precision-test-speed').innerText = '-- MB/s';
+                document.getElementById('precision-test-time').innerText = '-- s';
+                document.getElementById('precision-test-traffic').innerText = `${result.message || '未知错误'}`;
+            }
+        }
+
+        function updateNodeCardUI(node) {
+            console.log('===== updateNodeCardUI 开始 =====');
+            console.log('节点对象:', node);
+            console.log('节点host:', node.host, '节点port:', node.port);
+            
+            const rawSpeed = node.speed || 0;
+            const displaySpeed = Math.min(rawSpeed, 100).toFixed(1);
+            const speedPercent = Math.min((rawSpeed / 100) * 100, 100);
+            
+            console.log('原始速度:', rawSpeed);
+            console.log('显示速度:', displaySpeed);
+            console.log('进度条百分比:', speedPercent);
+            
+            // 重新计算质量评分
+            let qualityScore;
+            if (rawSpeed >= 10) qualityScore = 80;
+            else if (rawSpeed >= 5) qualityScore = 60;
+            else if (rawSpeed >= 2) qualityScore = 40;
+            else qualityScore = 20;
+            
+            // 确定样式
+            let speedColor = 'text-gray-500', barColor = 'bg-gray-700';
+            if (qualityScore >= 70) {
+                speedColor = 'text-emerald-400';
+                barColor = 'bg-emerald-500';
+            } else if (qualityScore >= 40) {
+                speedColor = 'text-amber-400';
+                barColor = 'bg-amber-500';
+            } else if (qualityScore > 0) {
+                speedColor = 'text-rose-400';
+                barColor = 'bg-rose-500';
+            }
+            
+            console.log('样式 - speedColor:', speedColor, 'barColor:', barColor);
+            
+            // 尝试用ID找到卡片 - 尽可能精确
+            const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-').replace(/:/g, '-');
+            console.log('计算的节点ID:', nodeId);
+            
+            let card = document.getElementById(nodeId);
+            
+            // 如果找不到，尝试搜索所有卡片中包含此host:port的
+            if (!card) {
+                console.log('通过ID未找到卡片，尝试通过内容搜索...');
+                const hostPort = `${node.host}:${node.port}`;
+                const allCards = document.querySelectorAll('.glass-card');
+                for (const c of allCards) {
+                    if (c.textContent.includes(hostPort)) {
+                        card = c;
+                        console.log('✅ 通过内容匹配找到卡片');
+                        break;
+                    }
+                }
+            }
+            
+            console.log('找到的卡片元素:', card);
+            
+            if (card) {
+                console.log('✅ 找到节点卡片');
+                
+                // 获取text-right容器
+                const textRight = card.querySelector('div.text-right');
+                console.log('text-right容器:', textRight);
+                
+                if (textRight) {
+                    // 更新速度显示 - 第一个子div
+                    const speedDiv = textRight.children[0];
+                    console.log('speedDiv:', speedDiv);
+                    
+                    if (speedDiv) {
+                        speedDiv.className = `font-mono text-xs font-bold ${speedColor}`;
+                        speedDiv.innerHTML = `${displaySpeed} <span class="text-[9px] opacity-70">MB/s</span>`;
+                        console.log('✅ 已更新速度:', displaySpeed);
+                    }
+                }
+                
+                // 更新进度条
+                const progressContainer = card.querySelector('div.h-1\\.5, div[style*="height"]');
+                console.log('进度条容器:', progressContainer);
+                
+                if (progressContainer) {
+                    const innerBar = progressContainer.querySelector('div');
+                    console.log('进度条内部元素:', innerBar);
+                    
+                    if (innerBar) {
+                        innerBar.style.width = speedPercent + '%';
+                        innerBar.className = `h-full ${barColor} transition-all duration-700`;
+                        console.log('✅ 已更新进度条:', speedPercent + '%');
+                    }
+                }
+            } else {
+                console.error('❌ 未找到节点卡片, nodeId:', nodeId);
+                console.log('页面上的所有卡片ID:');
+                document.querySelectorAll('.glass-card').forEach((c, idx) => {
+                    console.log(`  [${idx}] id=${c.id}, content: ${c.textContent.substring(0, 50)}...`);
+                });
+            }
+        }
+
+        async function testLatency(proxyUrl, nodeName) {
+            try {
+                console.log(`开始延迟测速: ${nodeName}`);
+                const response = await fetch(`${VIPER_API_BASE}/api/nodes/latency-test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proxy_url: proxyUrl })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('延迟测速结果:', data);
+                    
+                    // 更新节点延迟数据
+                    if (currentTestNode.nodeObject && data.latency) {
+                        currentTestNode.nodeObject.latency = data.latency;
+                        updateNodeLatencyUI(currentTestNode.nodeObject);
+                    }
+                }
+            } catch (error) {
+                console.error('延迟测速失败:', error);
+            }
+        }
+
+        function updateNodeLatencyUI(node) {
+            console.log('更新节点延迟UI - 寻找节点:', `${node.host}:${node.port}`);
+            
+            const latency = node.latency || 0;
+            const latencyText = latency > 0 ? `${Math.round(latency)}ms` : '--';
+            const latencyColor = latency > 0 ? 
+                (latency < 300 ? 'text-emerald-400' : 
+                 latency < 800 ? 'text-amber-400' : 
+                 'text-rose-400') : 
+                'text-gray-500';
+            
+            // 用ID直接找到延迟显示元素
+            const nodeId = `node-${node.host}-${node.port}`.replace(/\./g, '-');
+            const latencyElement = document.getElementById(`${nodeId}-latency`);
+            
+            if (latencyElement) {
+                console.log('✅ 找到延迟显示元素:', `${nodeId}-latency`);
+                latencyElement.className = `font-mono text-[10px] ${latencyColor} flex items-center justify-end gap-1`;
+                latencyElement.innerHTML = `<span class="opacity-50 text-[8px]">⚡</span>${latencyText}`;
+                console.log('✅ 已更新延迟:', latencyText);
+            } else {
+                console.warn('❌ 未找到延迟显示元素:', `${nodeId}-latency`);
+            }
+        }
+
+        // ================= 登录注册逻辑 =================
+        async function checkUserStatus() {
+            const { user, isVip, vipDate } = await getVipStatus();
+            updateAuthUI(user, isVip, vipDate);
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            if (!email || !password) return showToast("MISSING CREDENTIALS");
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                showToast("ACCESS GRANTED");
+                toggleAuthModal();
+                fetchData();
+            } catch (e) { showToast("LOGIN FAILED"); }
+        }
+
+        async function handleRegister() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            if (!email || !password) return showToast("MISSING CREDENTIALS");
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({ email, password });
+                if (error) throw error;
+                if (data.session) {
+                    showToast("REGISTRATION SUCCESSFUL");
+                    toggleAuthModal();
+                    fetchData();
+                } else showToast("CHECK EMAIL");
+            } catch (e) { showToast("ERROR: " + e.message); }
+        }
+
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            toggleAuthModal();
+            location.reload();
+        }
+
+        async function redeemKami() {
+            const code = document.getElementById('kami-code').value;
+            if (!code) return showToast("ENTER CODE");
+            try {
+                const { data, error } = await supabaseClient.rpc('redeem_kami', { code_input: code });
+                if (error) throw error;
+                showToast(data || "ACTIVATED");
+                checkUserStatus();
+                fetchData();
+            } catch (e) { showToast("SYSTEM ERROR"); }
+        }
+
+        // ================= ⚡ 双区域测速控制 =================
+        let speedTestInProgress = false;
+
+        function toggleSpeedTestModal() {
+            const modal = document.getElementById('speedtest-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                // 打开模态框时检查当前状态
+                checkSpeedTestStatus();
+            }
+        }
+
+        async function checkSpeedTestStatus() {
+            try {
+                const res = await fetch(`${SPIDERFLOW_API_BASE}/nodes/stats`);
+                if (!res.ok) throw new Error('Failed to fetch status');
+                const data = await res.json();
+                
+                // 检查是否正在测速（通过日志判断）
+                const logs = data.logs || [];
+                const allLogsText = logs.join('\n');
+                
+                // 严格判定：看最后是否有"🎉 测试完成"的日志
+                const completionRegex = /🎉\s*测试完成！有效节点:\s*(\d+)\/(\d+)/;
+                const isCompleted = completionRegex.test(allLogsText);
+                const isRunning = !isCompleted && allLogsText.includes('启动高级双地区测速');
+                
+                speedTestInProgress = isRunning;
+                updateSpeedTestUI(isRunning);
+            } catch (e) {
+                console.warn('[SpeedTest] Failed to check status:', e);
+            }
+        }
+
+        function updateSpeedTestUI(isRunning) {
+            const idleSection = document.getElementById('speedtest-idle');
+            const runningSection = document.getElementById('speedtest-running');
+            const doneSection = document.getElementById('speedtest-done');
+            const btn = document.getElementById('speedtest-btn');
+            
+            if (isRunning) {
+                idleSection.classList.add('hidden');
+                runningSection.classList.remove('hidden');
+                doneSection.classList.add('hidden');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                // 开始轮询
+                monitorSpeedTest();
+            } else {
+                idleSection.classList.remove('hidden');
+                runningSection.classList.add('hidden');
+                doneSection.classList.add('hidden');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+        }
+
+        async function startSpeedTest() {
+            try {
+                const btn = document.querySelector('#speedtest-idle button');
+                if (btn) btn.disabled = true;
+                
+                const res = await fetch(`${VIPER_API_BASE}/api/sync/poll-now`, {
+                    method: 'POST',
+                    cache: 'no-store'
+                });
+                
+                if (!res.ok) throw new Error('Failed to start speed test');
+                
+                speedTestInProgress = true;
+                updateSpeedTestUI(true);
+                
+                showToast('双区测速已启动，请等待 5-10 分钟...');
+                
+            } catch (e) {
+                console.error('[SpeedTest] Failed to start:', e);
+                showToast('启动失败: ' + e.message);
+            }
+        }
+
+        let speedTestMonitorInterval = null;
+        async function monitorSpeedTest() {
+            // 清除旧的监控
+            if (speedTestMonitorInterval) clearInterval(speedTestMonitorInterval);
+            
+            // 立即检查一次
+            await updateSpeedTestProgress();
+            
+            // 频繁检查（每 10 秒）而不是 3 分钟
+            // 这样可以快速响应测速完成信号（通常 10-30 秒内）
+            speedTestMonitorInterval = setInterval(async () => {
+                await updateSpeedTestProgress();
+            }, 10 * 1000);
+        }
+
+        async function updateSpeedTestProgress() {
+            try {
+                const res = await fetch(`${SPIDERFLOW_API_BASE}/nodes/stats`);
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                const logs = data.logs || [];
+                const allLogsText = logs.join('\n');
+                
+                // 🔥 改进：同时检查两个完成信号
+                // 1. 基础检测完成：🎉 节点检测完成！可用节点: X/Y
+                const basicCompletionRegex = /🎉\s*节点检测完成！可用节点:\s*(\d+)\/(\d+)/;
+                const basicCompleted = basicCompletionRegex.test(allLogsText);
+                
+                // 2. viper-node-store 同步完成：✅ viper-node-store 同步完成！
+                const syncCompletionRegex = /✅\s*viper-node-store 同步完成！/;
+                const syncCompleted = syncCompletionRegex.test(allLogsText);
+                
+                // 3. 检查是否有同步失败的情况
+                const syncFailedRegex = /⚠️\s*viper-node-store 同步失败/;
+                const syncFailed = syncFailedRegex.test(allLogsText);
+                
+                console.log('[Monitor] Status - basicCompleted:', basicCompleted, 'syncCompleted:', syncCompleted, 'syncFailed:', syncFailed);
+                
+                // 🔥 改进：基础检测完成 + (同步完成 OR 同步失败) 就表示整个流程完成
+                const isFullyCompleted = basicCompleted && (syncCompleted || syncFailed);
+                
+                if (isFullyCompleted) {
+                    speedTestInProgress = false;
+                    if (speedTestMonitorInterval) clearInterval(speedTestMonitorInterval);
+                    
+                    // 显示完成状态
+                    document.getElementById('speedtest-idle').classList.add('hidden');
+                    document.getElementById('speedtest-running').classList.add('hidden');
+                    document.getElementById('speedtest-done').classList.remove('hidden');
+                    
+                    if (syncCompleted) {
+                        document.getElementById('speedtest-result-msg').innerText = '✅ 双区测速完成！数据已同步到 viper-node-store，正在刷新...';
+                    } else if (syncFailed) {
+                        document.getElementById('speedtest-result-msg').innerText = '⚠️ 双区测速完成但同步失败，请检查 Supabase 配置...';
+                    }
+                    
+                    // 🔥 改进：只需 2-5 秒即可刷新（因为数据已经同步）
+                    setTimeout(() => {
+                        fetchData();
+                        toggleSpeedTestModal();
+                        showToast('✅ 测速完成！数据已更新');
+                    }, 2000);
+                } else if (basicCompleted) {
+                    // 🔥 新增：基础检测完成但等待同步的状态提示
+                    document.getElementById('speedtest-result-msg').innerText = '⏳ 基础检测完成，正在同步到 viper-node-store...';
+                    document.getElementById('speedtest-progress').innerText = '95%';
+                    document.getElementById('speedtest-bar').style.width = '95%';
+                } else {
+                    // 提取进度信息
+                    const mainlandMatch = allLogsText.match(/\[Aliyun\][\s\S]*?(\d+)\s*\/\s*(\d+)/);
+                    const overseasMatch = allLogsText.match(/\[Cloudflare\][\s\S]*?(\d+)\s*\/\s*(\d+)/);
+                    
+                    let mainlandMsg = '处理中...';
+                    let overseasMsg = '处理中...';
+                    let totalProgress = 0;
+                    
+                    if (mainlandMatch) {
+                        mainlandMsg = `${mainlandMatch[1]}/${mainlandMatch[2]}`;
+                        totalProgress = (parseInt(mainlandMatch[1]) / parseInt(mainlandMatch[2])) * 50;
+                    }
+                    
+                    if (overseasMatch) {
+                        overseasMsg = `${overseasMatch[1]}/${overseasMatch[2]}`;
+                        totalProgress += (parseInt(overseasMatch[1]) / parseInt(overseasMatch[2])) * 50;
+                    }
+                    
+                    document.getElementById('mainland-status').innerText = mainlandMsg;
+                    document.getElementById('overseas-status').innerText = overseasMsg;
+                    document.getElementById('speedtest-progress').innerText = Math.round(totalProgress) + '%';
+                    document.getElementById('speedtest-bar').style.width = totalProgress + '%';
+                }
+            } catch (e) {
+                console.warn('[Monitor] Failed to update progress:', e);
+            }
+        }
+
+        // ================= 🚀 [极速接入] 幽灵注入与处理逻辑 =================
+
+        // 1. 业务逻辑
+        async function handleQuickStart() {
+            const btn = document.getElementById('ghost-quick-btn');
+            let originalText = '';
+            if (btn) {
+                originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="animate-spin">↻</span> 系统接入中...';
+                btn.disabled = true;
+            }
+
+            try {
+                const timestamp = Date.now().toString().slice(-4);
+                const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+                const username = `VIPER-${randomStr}-${timestamp}`;
+                const password = `Viper#${Date.now().toString(36).slice(-8)}!`;
+                // 使用 shadow-network 域名，看起来更专业
+                const email = `agent.${randomStr.toLowerCase()}.${timestamp}@shadow-network.com`;
+
+                console.log(`[QuickStart] Generating Identity: ${username}`);
+
+                // 注册
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email, password: password,
+                    options: { data: { username: username } }
+                });
+
+                if (error) throw error;
+
+                // 自动登录 (无需二次 signIn，signUp 在关闭验证时会直接返回 session)
+                if (!data.session) {
+                    // 如果万一没返回session，补刀登录
+                    const { error: loginError } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (loginError) throw loginError;
+                }
+
+                // 本地记忆
+                localStorage.setItem('shadow_user_email', email);
+                localStorage.setItem('shadow_user_pass', password);
+
+                // UI 反馈
+                showIdentityCard(username, password);
+                document.getElementById('auth-modal').classList.add('hidden');
+
+                // 刷新数据以应用登录状态
+                fetchData();
+
+            } catch (err) {
+                console.error(err);
+                alert('接入中断: ' + err.message);
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        // 2. 身份卡显示
+        function showIdentityCard(user, pass) {
+            document.getElementById('new-username').innerText = user;
+            document.getElementById('new-password').innerText = pass;
+            window.currentIdentity = { user, pass };
+
+            const modal = document.getElementById('identity-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // 3. 复制与下载
+        function copyIdentity() {
+            const { user, pass } = window.currentIdentity;
+            navigator.clipboard.writeText(`ID: ${user}\nKey: ${pass}`).then(() => {
+                const tip = document.getElementById('copy-tip');
+                tip.classList.remove('opacity-0');
+                setTimeout(() => tip.classList.add('opacity-0'), 1500);
+                enableEnterButton();
+            });
+        }
+        function downloadIdentity() {
+            const { user, pass } = window.currentIdentity;
+            const text = `=== Shadow Nexus ===\nID: ${user}\nKey: ${pass}\nGenerated: ${new Date().toLocaleString()}`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Shadow-ID-${user}.txt`;
+            a.click();
+            enableEnterButton();
+        }
+        function enableEnterButton() {
+            const btn = document.getElementById('btn-enter');
+            btn.disabled = false;
+            btn.innerText = "我已保存，进入系统 (Enter)";
+            btn.classList.remove('bg-gray-700', 'text-gray-500', 'cursor-not-allowed');
+            btn.classList.add('bg-cyan-600', 'text-white', 'hover:bg-cyan-500');
+        }
+        function closeIdentityModal() {
+            document.getElementById('identity-modal').classList.add('hidden');
+            // 此时已经是登录状态，直接刷新数据即可，无需重载页面
+            fetchData();
+        }
+
+        // ================= 同步时间显示 =================
+        
+        /**
+         * 格式化相对时间显示
+         * @param {number} minutesAgo 分钟数
+         * @returns {string} 格式化的字符串
+         */
+        function formatTimeAgo(minutesAgo) {
+            if (minutesAgo < 1) return '刚刚';
+            if (minutesAgo < 60) return `${minutesAgo}分钟前`;
+            const hoursAgo = Math.floor(minutesAgo / 60);
+            if (hoursAgo < 24) return `${hoursAgo}小时前`;
+            const daysAgo = Math.floor(hoursAgo / 24);
+            return `${daysAgo}天前`;
+        }
+
+        /**
+         * 手动触发后端轮询并刷新显示
+         * 用于用户点击刷新按钮时主动同步数据
+         */
+        async function triggerPollAndRefresh() {
+            try {
+                console.log('🔄 触发手动轮询...');
+                const response = await fetch(`${VIPER_API_BASE}/api/sync/poll-now`, {
+                    method: 'POST',
+                    cache: 'no-store'
+                });
+                
+                if (response.ok) {
+                    console.log('✅ 轮询请求已发送');
+                    // 等待2秒让后端处理，然后刷新显示
+                    setTimeout(() => {
+                        fetchSyncInfo();
+                    }, 2000);
+                } else {
+                    console.error('轮询请求失败:', response.status);
+                    setTimeout(() => fetchSyncInfo(), 1000);
+                }
+            } catch (error) {
+                console.error('触发轮询错误:', error);
+                // 即使轮询失败，也尝试刷新显示
+                setTimeout(() => fetchSyncInfo(), 1000);
+            }
+        }
+
+        /**
+         * 获取并显示同步信息
+         * 支持两个数据源:
+         * 1. /api/sync-info - 后端API (首选)
+         * 2. window.nodesData - 前端本地数据
+         */
+        async function fetchSyncInfo() {
+            try {
+                const timeDisplay = document.getElementById('sync-time-display');
+                const nodesCountDisplay = document.getElementById('nodes-count');
+                
+                // 优先从API获取
+                try {
+                    const response = await fetch(`${VIPER_API_BASE}/api/sync-info`, {
+                        method: 'GET',
+                        cache: 'no-store',
+                        timeout: 3000
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const displayText = formatTimeAgo(data.minutes_ago);
+                        
+                        if (timeDisplay) {
+                            timeDisplay.textContent = displayText;
+                        }
+                        if (nodesCountDisplay) {
+                            nodesCountDisplay.textContent = data.active_count || 0;
+                        }
+                        
+                        // 更新后，继续30秒后的下一次更新
+                        setTimeout(fetchSyncInfo, 30000);
+                        return;
+                    }
+                } catch (apiError) {
+                    console.debug('API fetch failed, using local data:', apiError.message);
+                }
+                
+                // 降级方案: 从前端本地数据获取
+                if (window.nodesData && Array.isArray(window.nodesData)) {
+                    const activeCount = window.nodesData.length;
+                    const displayText = '刚刚';
+                    
+                    if (timeDisplay) {
+                        timeDisplay.textContent = displayText;
+                    }
+                    if (nodesCountDisplay) {
+                        nodesCountDisplay.textContent = activeCount;
+                    }
+                } else {
+                    if (timeDisplay) {
+                        timeDisplay.textContent = '正在加载...';
+                    }
+                    if (nodesCountDisplay) {
+                        nodesCountDisplay.textContent = 0;
+                    }
+                }
+                
+                // 继续30秒后的下一次更新
+                setTimeout(fetchSyncInfo, 30000);
+            } catch (error) {
+                console.error('Error in fetchSyncInfo:', error);
+                const timeDisplay = document.getElementById('sync-time-display');
+                if (timeDisplay) {
+                    timeDisplay.textContent = '加载失败';
+                }
+                setTimeout(fetchSyncInfo, 30000);
+            }
+        }
+
+        // 4. [幽灵注入器]
+        function injectGhostButton() {
+            const btnContainer = document.querySelector('#login-section .flex.gap-3');
+            if (btnContainer && !document.getElementById('ghost-quick-btn')) {
+                const quickBtn = document.createElement('button');
+                quickBtn.id = 'ghost-quick-btn';
+                quickBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                    </svg>
+                    极速接入 (Quick Start)
+                `;
+                quickBtn.className = "w-full mt-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-sm";
+                quickBtn.onclick = handleQuickStart;
+                btnContainer.parentNode.insertBefore(quickBtn, btnContainer.nextSibling);
+            }
+        }
+
+        // 🔥 性能优化：限制 MutationObserver 的监听范围，避免全局 DOM 监听
+        const authModal = document.getElementById('auth-modal');
+        if (authModal) {
+            const observer = new MutationObserver((mutations) => injectGhostButton());
+            observer.observe(authModal, { childList: true, subtree: false });
+        }
+        // 延迟注入，只执行一次
+        setTimeout(injectGhostButton, 500);
+
+        // ================= 🏥 健康检测逻辑 =================
+        
+        let healthCheckInProgress = false;
+        
+        function toggleHealthCheckModal() {
+            const modal = document.getElementById('health-check-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                // 打开时加载统计数据
+                loadHealthStats();
+                // 重置UI状态
+                document.getElementById('health-check-idle').classList.remove('hidden');
+                document.getElementById('health-check-running').classList.add('hidden');
+                document.getElementById('health-check-done').classList.add('hidden');
+            }
+        }
+        
+        async function loadHealthStats() {
+            try {
+                const res = await fetch(`${VIPER_API_BASE}/api/health-check/stats`, {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'success' && data.data) {
+                        document.getElementById('stat-total').innerText = data.data.total || '--';
+                        document.getElementById('stat-online').innerText = data.data.online || '--';
+                        document.getElementById('stat-offline').innerText = data.data.offline || '--';
+                        document.getElementById('stat-suspect').innerText = data.data.suspect || '--';
+                    }
+                }
+            } catch (e) {
+                console.warn('[HealthCheck] Failed to load stats:', e);
+            }
+        }
+        
+        async function startHealthCheck() {
+            if (healthCheckInProgress) {
+                showToast('检测进行中，请稍候...');
+                return;
+            }
+            
+            healthCheckInProgress = true;
+            
+            // 更新UI
+            document.getElementById('health-check-idle').classList.add('hidden');
+            document.getElementById('health-check-running').classList.remove('hidden');
+            document.getElementById('health-check-done').classList.add('hidden');
+            document.getElementById('health-check-bar').style.width = '30%';
+            
+            try {
+                console.log('[HealthCheck] 开始健康检测...');
+                
+                const res = await fetch(`${VIPER_API_BASE}/api/health-check`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ batch_size: 50 })
+                });
+                
+                document.getElementById('health-check-bar').style.width = '80%';
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('[HealthCheck] 检测结果:', data);
+                    
+                    document.getElementById('health-check-bar').style.width = '100%';
+                    
+                    // 显示完成状态
+                    document.getElementById('health-check-running').classList.add('hidden');
+                    document.getElementById('health-check-done').classList.remove('hidden');
+                    
+                    if (data.status === 'success' && data.data) {
+                        const result = data.data;
+                        document.getElementById('health-check-result-msg').innerText = 
+                            `检测 ${result.checked_count} 个节点 | 在线: ${result.online_count} | 离线: ${result.offline_count} | 可疑: ${result.suspect_count} | 耗时: ${result.duration_seconds}s`;
+                        
+                        // 更新统计
+                        await loadHealthStats();
+                        
+                        showToast(`✅ 检测完成！在线: ${result.online_count}, 离线: ${result.offline_count}`);
+                    } else {
+                        document.getElementById('health-check-result-msg').innerText = data.message || '检测完成';
+                    }
+                    
+                    // 刷新节点列表以显示最新状态
+                    setTimeout(() => fetchData(), 1000);
+                    
+                } else {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                
+            } catch (e) {
+                console.error('[HealthCheck] 检测失败:', e);
+                
+                document.getElementById('health-check-running').classList.add('hidden');
+                document.getElementById('health-check-done').classList.remove('hidden');
+                document.getElementById('health-check-result-msg').innerText = `检测失败: ${e.message}`;
+                
+                showToast('❌ 检测失败: ' + e.message);
+            } finally {
+                healthCheckInProgress = false;
+            }
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,8 +1,16 @@
-# SHADOW NEXUS - 节点测试系统依赖
+# viper-node-store - 节点数据管理和同步平台
 # ================================
+
+# FastAPI框架
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
 
 # HTTP 异步请求
 aiohttp>=3.9.0
+
+# 定时任务调度
+APScheduler>=3.10.0
 
 # Supabase 数据库客户端
 supabase>=2.0.0
@@ -10,9 +18,9 @@ supabase>=2.0.0
 # 基础请求库 (向后兼容)
 requests>=2.31.0
 
-# DNS 解析优化 (可选)
+# DNS 解析优化
 aiodns>=3.1.0
 
-# 更快的事件循环 (可选, 仅 Linux)
-# uvloop>=0.19.0
+# JSON和数据处理
+python-json-logger>=2.0.0
 
