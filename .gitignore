@@ -26,3 +26,5 @@ Thumbs.db
 .cache/
 dist/
 build/
+
+.github/workflows/update-nodes.yml
