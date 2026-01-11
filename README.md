@@ -16,6 +16,7 @@
 - **[项目结构与功能说明](docs/PROJECT_STRUCTURE.md)** - 了解项目架构、技术栈、API 端点
 - **[更新日志与修复记录](docs/CHANGELOG.md)** - 查看所有优化和修复
 - **[快速参考](docs/QUICK_REFERENCE.md)** - 常用命令和快速诊断
+- **[Vercel 部署配置](docs/VERCEL_DEPLOYMENT.md)** - Serverless 部署指南
 
 ### 🆘 遇到问题？
 - **[API 404 错误](docs/API_404_TROUBLESHOOTING.md)** - 后端 API 无响应？看这里

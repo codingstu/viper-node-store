@@ -4,7 +4,45 @@
 
 ---
 
-## 🐛 2026-01-11 - 生产环境 API 404 错误诊断和排查指南
+## � 2026-01-11 - Vercel Serverless 部署适配
+
+### 部署平台确认
+- **平台**: Vercel (serverless)
+- **后端**: FastAPI + Python
+- **前端**: Vue.js + Vite
+
+### 配置更新
+✅ **Vercel 配置适配**：
+- 创建 `api/index.py` 作为 serverless function 入口
+- 更新 `vercel.json` 指向新的 API 入口
+- 保持前端构建配置不变
+
+✅ **文件结构**：
+```
+api/index.py          # Vercel serverless 入口
+vercel.json           # Vercel 部署配置
+backend/              # 模块化后端代码
+frontend/             # Vue.js 前端代码
+```
+
+### 环境变量要求
+在 Vercel Dashboard 中设置：
+- `SUPABASE_URL`: Supabase 项目 URL
+- `SUPABASE_KEY`: Supabase 匿名密钥
+
+### 注意事项
+⚠️ **Serverless 限制**：
+- 定时任务（APScheduler）在 serverless 环境中不工作
+- 每次请求都是冷启动
+- 执行时间限制为 10 秒（Hobby 计划）
+
+### 部署验证
+- 前端: `https://your-domain.vercel.app`
+- API: `https://your-domain.vercel.app/api/status`
+
+---
+
+## �🐛 2026-01-11 - 生产环境 API 404 错误诊断和排查指南
 
 ### 问题描述
 - **症状**: 线上前端请求 `GET /api/nodes` 和 `GET /api/sync-info` 返回 404
