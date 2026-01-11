@@ -253,8 +253,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useAuthStore } from '../stores/authStore'
+import { useNodeStore } from '../stores/nodeStore'
 
 const authStore = useAuthStore()
+const nodeStore = useNodeStore()
 const isOpen = ref(false)
 const activeTab = ref('login')
 const redeemSuccess = ref('')
@@ -280,6 +282,10 @@ const handleLogin = async () => {
   if (result.success) {
     loginForm.value = { email: '', password: '' }
     redeemSuccess.value = ''
+    
+    // 登录成功后刷新节点列表，以应用VIP状态
+    await nodeStore.refreshNodes()
+    
     setTimeout(() => {
       isOpen.value = false
     }, 500)
@@ -308,6 +314,10 @@ const handleQuickStart = async () => {
   if (result.success) {
     registerForm.value = { email: '', username: '', password: '' }
     redeemSuccess.value = '✅ 已自动登录！'
+    
+    // 极速注册成功后刷新节点列表
+    await nodeStore.refreshNodes()
+    
     setTimeout(() => {
       isOpen.value = false
     }, 1000)
@@ -324,6 +334,10 @@ const handleRedeemCode = async () => {
   if (result.success) {
     redeemSuccess.value = '✅ 激活成功！您已升级为 VIP 用户'
     redeemForm.value.code = ''
+    
+    // 激活VIP成功后，刷新节点列表以获取更多节点
+    await nodeStore.refreshNodes()
+    
     // 等待 2 秒后关闭下拉面板，让用户看到成功提示
     setTimeout(() => {
       redeemSuccess.value = ''
