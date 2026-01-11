@@ -16,7 +16,7 @@
             <div class="flex items-center gap-3">
               <span class="text-3xl">🐍</span>
               <div>
-                <h1 class="text-2xl font-bold text-white">Viper Node Store</h1>
+                <!-- <h1 class="text-2xl font-bold text-white">Viper Node Store</h1> -->
                 <p class="text-xs text-gray-400">节点管理和测速平台</p>
               </div>
             </div>

@@ -1,104 +1,319 @@
-# SHADOW NEXUS - 双地区智能节点测速系统
+# Viper Node Store - 代理节点测速系统
 
 ![Status](https://img.shields.io/badge/Status-Active-green)
 ![License](https://img.shields.io/badge/License-MIT-blue)
-![Cost](https://img.shields.io/badge/Cost-Free-brightgreen)
-![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Architecture](https://img.shields.io/badge/Architecture-Modular-blue)
+![Backend](https://img.shields.io/badge/Backend-FastAPI-blue)
+![Frontend](https://img.shields.io/badge/Frontend-Vue3-green)
 
-**一个全自动、零成本的代理节点质量检测系统，分别在大陆和国外进行真实测速，确保最佳的用户体验。**
+**一个全自动、零成本的代理节点质量检测系统。** 采用**前后端分离、模块化架构**，易于维护和扩展。
+
+---
+
+## 🎯 快速导航
+
+### 📚 完整文档
+- **[项目结构与功能说明](docs/PROJECT_STRUCTURE.md)** - 了解项目架构、技术栈、API 端点
+- **[更新日志与修复记录](docs/CHANGELOG.md)** - 查看所有优化和修复
+
+### 🚀 快速启动
+
+#### 启动后端
+```bash
+# 方式 1：直接运行
+python backend/main.py
+
+# 方式 2：使用启动脚本
+bash scripts/start-backend.sh
+```
+后端地址: `http://localhost:8002`
+
+#### 启动前端
+```bash
+cd frontend
+npm run dev
+```
+前端地址: `http://localhost:5173`
 
 ---
 
 ## ✨ 主要特性
 
-### 🌍 双地区测速
-- **🇨🇳 大陆测速:** Aliyun Function Compute (杭州/上海)
-- **🌐 国外测速:** Cloudflare Workers (全球节点)
-- **🎯 精准分类:** 按国家自动分配测速方式
+### 🌐 节点管理
+- 从 Supabase 实时获取节点数据
+- 支持分页、搜索、排序
+- VIP 和免费用户限额管理
 
-### ⚡ 自动化运行
-- GitHub Actions 每 4 小时运行一次
-- 支持手动触发
-- 完整的日志和错误处理
+### 🏥 健康检测
+- TCP 连接测试
+- HTTP 连通性测试
+- 并发健康检测（最多 20 个并发）
+- 自动重试机制
+
+### ⚡ 测速功能
+- 精确下载速度测试
+- 延迟测试
+- 性能评分
+
+### 🔐 用户认证
+- VIP 状态检查
+- 激活码兑换
+- 安全的服务端验证
 
 ### 💾 数据管理
-- Supabase 云数据库存储
-- 自动去重 (防止重复)
-- VIP 用户和免费用户区分
-
-### 🌐 智能前端
-- 实时显示最新测速结果
-- 禁用缓存确保数据最新
-- 支持节点搜索和筛选
-- 二维码快速复制
-
-### 💰 完全免费
-- Aliyun FC: 100 万次/月免费额度
-- Cloudflare Workers: 10 万次/天免费额度
-- GitHub Actions: 充足免费额度
-- Supabase: 免费 500MB 存储
+- Supabase 云数据库
+- 定时数据同步
+- Webhook 支持
 
 ---
 
-## 📊 系统架构
+## 🏗️ 项目结构
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│              GitHub Actions (每 4 小时)                  │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-                ┌──────▼──────┐
-                │ 获取原始节点 │
-                └──────┬───────┘
-                       │
-         ┌─────────────┼─────────────┐
-         │             │             │
-         ▼             ▼             ▼
-    🇨🇳 CN         🌍 HK/TW      🌍 其他
-   大陆节点         回国节点       国外节点
-         │             │             │
-         └─────────────┼─────────────┘
-                       │
-         ┌─────────────┴─────────────┐
-         │                           │
-         ▼                           ▼
-    ⚙️ Aliyun FC          🌍 Cloudflare Workers
-    (大陆测速)              (国外测速)
-         │                           │
-         └─────────────┬─────────────┘
-                       │
-                ┌──────▼──────┐
-                │ 合并结果    │
-                └──────┬───────┘
-                       │
-                ┌──────▼──────────┐
-                │ Supabase 数据库  │
-                └──────┬───────────┘
-                       │
-                ┌──────▼──────────┐
-                │ 前端网页        │
-                └─────────────────┘
+viper-node-store/
+├── backend/                    # 后端（FastAPI）
+│   ├── main.py                # 主应用入口
+│   ├── config.py              # 配置管理
+│   ├── core/                  # 核心模块（日志、数据库）
+│   ├── api/                   # API 路由和模型
+│   ├── services/              # 业务逻辑
+│   └── webhooks/              # Webhook 处理
+│
+├── frontend/                  # 前端（Vue 3）
+│   ├── src/
+│   │   ├── App.vue
+│   │   ├── components/        # UI 组件
+│   │   ├── services/          # API 调用
+│   │   └── stores/            # 状态管理
+│   └── package.json
+│
+├── docs/                      # 文档
+│   ├── PROJECT_STRUCTURE.md   # 项目说明
+│   └── CHANGELOG.md           # 更新日志
+│
+├── scripts/                   # 启动脚本
+└── requirements.txt           # Python 依赖
 ```
+
+---
+
+## 🔧 技术栈
+
+| 组件 | 技术 |
+|------|------|
+| **后端框架** | FastAPI |
+| **前端框架** | Vue 3 + Vite |
+| **样式** | Tailwind CSS |
+| **状态管理** | Pinia |
+| **数据库** | Supabase |
+| **异步框架** | asyncio |
+| **HTTP 客户端** | aiohttp |
 
 ---
 
 ## 🚀 快速开始
 
 ### 前置条件
-- GitHub 仓库已配置
-- Aliyun FC 已部署
-- Supabase 项目已创建
-- Cloudflare 账号
+- Python 3.11+
+- Node.js 18+
+- Supabase 账户
+- Cloudflare 账户（可选）
 
-### 3 分钟快速启动
+### 本地开发
 
-**第 1 步: 部署 Cloudflare Worker**
+**1. 克隆和安装**
 ```bash
-1. 访问 https://dash.cloudflare.com
-2. Workers and Pages → Create a Worker
-3. 复制粘贴 cloudflare_worker.js 内容
-4. 保存 Worker URL
+git clone <repository>
+cd viper-node-store
+
+# 安装后端依赖
+pip install -r requirements.txt
+
+# 安装前端依赖
+cd frontend
+npm install
+cd ..
 ```
+
+**2. 配置环境变量**
+```bash
+# 创建 .env 文件（参考 .env.example）
+export SUPABASE_URL="https://..."
+export SUPABASE_KEY="eyJhbGc..."
+```
+
+**3. 启动服务**
+```bash
+# 终端 1: 启动后端
+python backend/main.py
+
+# 终端 2: 启动前端
+cd frontend
+npm run dev
+```
+
+**4. 访问应用**
+- 前端: http://localhost:5173
+- 后端 API: http://localhost:8002/api/nodes
+
+---
+
+## 📖 API 文档
+
+### 主要端点
+
+| 方法 | 端点 | 说明 |
+|------|------|------|
+| `GET` | `/api/nodes` | 获取节点列表 |
+| `GET` | `/api/sync-info` | 获取同步信息 |
+| `POST` | `/api/health-check` | 触发健康检测 |
+| `POST` | `/api/nodes/precision-test` | 精确测速 |
+| `POST` | `/api/nodes/latency-test` | 延迟测试 |
+| `POST` | `/api/auth/redeem-code` | 兑换激活码 |
+
+**详见 [项目结构文档](docs/PROJECT_STRUCTURE.md#-api-文档)**
+
+---
+
+## ⚙️ 配置
+
+所有配置在 `backend/config.py` 中管理：
+
+```python
+# Supabase 配置
+SUPABASE_URL = "..."
+SUPABASE_KEY = "..."
+
+# 服务器
+HOST = "0.0.0.0"
+PORT = 8002
+
+# 限制
+DEFAULT_NODE_LIMIT = 20      # 免费用户
+VIP_NODE_LIMIT = 500         # VIP 用户
+```
+
+支持环境变量覆盖。
+
+---
+
+## 📊 数据库
+
+### Supabase 表结构
+
+**nodes** 表包含：
+- 节点信息（host、port、protocol）
+- 测速结果（速度、延迟、评分）
+- 健康状态（online/offline/suspect）
+- 时间戳
+
+**activation_codes** 表包含：
+- 激活码
+- VIP 期限
+- 使用情况
+
+**详见 [项目结构文档](docs/PROJECT_STRUCTURE.md#-supabase-数据库结构)**
+
+---
+
+## 🧪 测试
+
+```bash
+# 测试后端
+curl http://localhost:8002/api/status
+
+# 获取节点
+curl http://localhost:8002/api/nodes?limit=10
+
+# 获取同步信息
+curl http://localhost:8002/api/sync-info
+```
+
+---
+
+## 📈 定时任务
+
+系统自动运行：
+- **每 12 分钟**: Supabase 数据拉取（更新缓存）
+
+手动触发：
+```bash
+curl -X POST http://localhost:8002/api/sync/poll-now
+```
+
+---
+
+## 🔄 更新日志
+
+查看 [CHANGELOG.md](docs/CHANGELOG.md) 了解：
+- ✅ 2026-01-11 - 项目重构与解耦（模块化架构）
+- ✅ 2026-01-06 - 前端同步状态修复
+- ✅ 2026-01-06 - Cloudflare Worker 修复
+
+---
+
+## 💡 开发指南
+
+### 添加新 API
+1. 在 `backend/api/models.py` 定义数据模型
+2. 在 `backend/services/` 实现业务逻辑
+3. 在 `backend/api/routes.py` 注册路由
+
+### 添加新功能
+1. 创建新服务类 (`backend/services/your_service.py`)
+2. 在 `backend/api/routes.py` 中调用
+3. 更新 [CHANGELOG.md](docs/CHANGELOG.md)
+
+### 修改配置
+1. 编辑 `backend/config.py`
+2. 更新 `.env.example`
+3. 记录变更
+
+---
+
+## 🐛 故障排除
+
+### 后端无法启动
+- 检查 Python 版本：`python --version`
+- 检查依赖：`pip install -r requirements.txt`
+- 检查环境变量：`echo $SUPABASE_URL`
+
+### 前端无法连接后端
+- 确保后端运行在 `http://localhost:8002`
+- 检查 CORS 配置
+- 查看浏览器控制台错误
+
+### API 返回错误
+- 查看后端日志输出
+- 检查 Supabase 连接
+- 验证 API 端点正确性
+
+**更多信息见 [CHANGELOG.md](docs/CHANGELOG.md)**
+
+---
+
+## 📄 许可证
+
+MIT License - 详见 LICENSE 文件
+
+---
+
+## 📞 支持
+
+- 查看 [项目结构文档](docs/PROJECT_STRUCTURE.md)
+- 检查 [更新日志](docs/CHANGELOG.md)
+- 查看日志输出诊断问题
+
+---
+
+## 🎉 致谢
+
+感谢所有贡献者和使用者的支持！
+
+---
+
+**最后更新**: 2026-01-11 | **版本**: 2.0.0
+
 
 **第 2 步: 添加 GitHub Secret**
 ```
