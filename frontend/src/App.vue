@@ -14,7 +14,7 @@
           <div class="flex items-center justify-between">
             <!-- Logo -->
             <div class="flex items-center gap-3">
-              <span class="text-3xl">🐍</span>
+              <span class="text-3xl animate-pulse">🌟</span>
               <div>
                 <!-- <h1 class="text-2xl font-bold text-white">Viper Node Store</h1> -->
                 <h1 class="font-black text-xl text-white tracking-widest uppercase italic">
