@@ -103,7 +103,6 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <!-- 协议过滤 -->
             <div>
-              <label class="block text-xs text-gray-400 mb-1.5">协议</label>
               <select v-model="nodeStore.selectedProtocol"
                 class="w-full px-3 py-1 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
                 <option value="">所有协议</option>
@@ -115,7 +114,6 @@
 
             <!-- 国家过滤 -->
             <div>
-              <label class="block text-xs text-gray-400 mb-1.5">国家</label>
               <select v-model="nodeStore.selectedCountry"
                 class="w-full px-3 py-1 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
                 <option value="">所有国家</option>
