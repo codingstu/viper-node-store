@@ -15,14 +15,14 @@
         🔐 登录
       </template>
       <template v-else>
-        <span class="text-xs text-gray-200">{{ authStore.displayName }}</span>
+        <span v-if="!mobileOnly" class="text-xs text-gray-200">{{ authStore.displayName }}</span>
         <div v-if="authStore.isVip"
           class="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full text-xs font-bold border border-yellow-500/50">
-          ⭐ VIP
+          <span v-if="!mobileOnly">⭐</span> VIP
         </div>
         <div v-else
           class="inline-flex items-center gap-1 bg-gray-500/20 text-gray-300 px-2 py-0.5 rounded-full text-xs font-bold border border-gray-500/50">
-          👤 用户
+          <span v-if="!mobileOnly">👤</span> 用户
         </div>
       </template>
     </button>
@@ -260,6 +260,13 @@ const nodeStore = useNodeStore()
 const isOpen = ref(false)
 const activeTab = ref('login')
 const redeemSuccess = ref('')
+
+const props = defineProps({
+  mobileOnly: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const loginForm = ref({
   email: '',

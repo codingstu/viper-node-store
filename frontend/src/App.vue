@@ -18,28 +18,42 @@
               <div>
                 <!-- <h1 class="text-2xl font-bold text-white">Viper Node Store</h1> -->
                 <h1 class="font-black text-xl text-white tracking-widest uppercase italic">
-                  萤火云 <span class="text-emerald-500 neon-text">全球节点</span>
+                  萤火云 <span class="hidden md:inline text-emerald-500 neon-text">全球节点</span>
                 </h1>
               </div>
             </div>
 
             <!-- 右侧操作区 -->
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 md:gap-4">
               <!-- 健康检测按钮 -->
               <button @click="showHealthCheckModal = true"
-                class="px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-sm font-bold rounded-lg border border-emerald-500/50 transition"
+                class="hidden md:flex px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-sm font-bold rounded-lg border border-emerald-500/50 transition items-center gap-1"
                 title="检测所有节点的健康状态">
-                🏥 健康检测
+                🏥 <span>健康检测</span>
+              </button>
+
+              <!-- 健康检测图标（移动端） -->
+              <button @click="showHealthCheckModal = true"
+                class="md:hidden px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-lg rounded-lg border border-emerald-500/50 transition"
+                title="检测所有节点的健康状态">
+                🏥
               </button>
 
               <!-- 刷新按钮 -->
               <button @click="nodeStore.refreshNodes()" :disabled="nodeStore.isLoading"
-                class="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-lg transition disabled:opacity-50">
-                {{ nodeStore.isLoading ? '加载中...' : '🔄 刷新' }}
+                class="hidden md:flex px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-lg transition disabled:opacity-50 items-center gap-1">
+                <span>{{ nodeStore.isLoading ? '加载中...' : '🔄 刷新' }}</span>
               </button>
 
-              <!-- 账户下拉面板（替代 AuthModal） -->
-              <AuthDropdown />
+              <!-- 刷新图标（移动端） -->
+              <button @click="nodeStore.refreshNodes()" :disabled="nodeStore.isLoading"
+                class="md:hidden px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white text-lg rounded-lg transition disabled:opacity-50"
+                title="刷新节点列表">
+                🔄
+              </button>
+
+              <!-- 账户下拉面板 -->
+              <AuthDropdown :mobileOnly="true" />
             </div>
           </div>
         </div>
