@@ -96,7 +96,7 @@
           <!-- 搜索框 -->
           <div class="relative">
             <input v-model="nodeStore.searchKeyword" type="text" placeholder="🔍 搜索节点名称、地址、国家..."
-              class="w-full px-4 py-2 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition" />
+              class="w-full px-4 py-1.5 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition" />
           </div>
 
           <!-- 过滤器 -->
@@ -105,7 +105,7 @@
             <div>
               <label class="block text-xs text-gray-400 mb-1.5">协议</label>
               <select v-model="nodeStore.selectedProtocol"
-                class="w-full px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
+                class="w-full px-3 py-1 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
                 <option value="">所有协议</option>
                 <option v-for="protocol in nodeStore.filters.protocols" :key="protocol" :value="protocol">
                   {{ protocol }}
@@ -117,7 +117,7 @@
             <div>
               <label class="block text-xs text-gray-400 mb-1.5">国家</label>
               <select v-model="nodeStore.selectedCountry"
-                class="w-full px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
+                class="w-full px-3 py-1 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
                 <option value="">所有国家</option>
                 <option v-for="country in nodeStore.filters.countries" :key="country" :value="country">
                   {{ country }}
