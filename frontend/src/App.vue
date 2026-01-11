@@ -72,23 +72,23 @@
       </header>
 
       <!-- 统计信息 -->
-      <section class="max-w-7xl mx-auto px-4 py-3">
+      <section class="max-w-7xl mx-auto px-4 py-2">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div class="bg-gradient-to-br from-purple-500/10 to-purple-500/5 p-2 rounded-xl border border-purple-500/20">
+          <div class="bg-gradient-to-br from-purple-500/10 to-purple-500/5 p-1.5 rounded-xl border border-purple-500/20">
             <p class="text-[10px] text-gray-400">总节点数</p>
-            <p class="text-2xl font-bold text-purple-300 mt-0.5">{{ nodeStore.nodeCount }}</p>
+            <p class="text-xl font-bold text-purple-300 mt-0.5">{{ nodeStore.nodeCount }}</p>
           </div>
           <div
-            class="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-2 rounded-xl border border-emerald-500/20">
+            class="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-1.5 rounded-xl border border-emerald-500/20">
             <p class="text-[10px] text-gray-400">健康节点</p>
-            <p class="text-2xl font-bold text-emerald-300 mt-0.5">{{ nodeStore.healthyNodeCount }}</p>
+            <p class="text-xl font-bold text-emerald-300 mt-0.5">{{ nodeStore.healthyNodeCount }}</p>
           </div>
-          <div class="bg-gradient-to-br from-blue-500/10 to-blue-500/5 p-2 rounded-xl border border-blue-500/20">
+          <div class="bg-gradient-to-br from-blue-500/10 to-blue-500/5 p-1.5 rounded-xl border border-blue-500/20">
             <p class="text-[10px] text-gray-400">平均速度</p>
-            <p class="text-2xl font-bold text-blue-300 mt-0.5">{{ nodeStore.avgSpeed }}</p>
+            <p class="text-xl font-bold text-blue-300 mt-0.5">{{ nodeStore.avgSpeed }}</p>
             <p class="text-[10px] text-gray-500">MB/s</p>
           </div>
-          <div class="bg-gradient-to-br from-pink-500/10 to-pink-500/5 p-2 rounded-xl border border-pink-500/20">
+          <div class="bg-gradient-to-br from-pink-500/10 to-pink-500/5 p-1.5 rounded-xl border border-pink-500/20">
             <p class="text-[10px] text-gray-400">最后更新</p>
             <p class="text-xs font-bold text-pink-300 mt-0.5">{{ lastUpdateTime }}</p>
           </div>
@@ -96,21 +96,21 @@
       </section>
 
       <!-- 搜索和过滤 -->
-      <section class="max-w-7xl mx-auto px-4 py-6">
-        <div class="space-y-4">
+      <section class="max-w-7xl mx-auto px-4 py-4">
+        <div class="space-y-3">
           <!-- 搜索框 -->
           <div class="relative">
             <input v-model="nodeStore.searchKeyword" type="text" placeholder="🔍 搜索节点名称、地址、国家..."
-              class="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition" />
+              class="w-full px-4 py-2 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition" />
           </div>
 
           <!-- 过滤器 -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <!-- 协议过滤 -->
             <div>
-              <label class="block text-xs text-gray-400 mb-2">协议</label>
+              <label class="block text-xs text-gray-400 mb-1.5">协议</label>
               <select v-model="nodeStore.selectedProtocol"
-                class="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
+                class="w-full px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
                 <option value="">所有协议</option>
                 <option v-for="protocol in nodeStore.filters.protocols" :key="protocol" :value="protocol">
                   {{ protocol }}
@@ -120,9 +120,9 @@
 
             <!-- 国家过滤 -->
             <div>
-              <label class="block text-xs text-gray-400 mb-2">国家</label>
+              <label class="block text-xs text-gray-400 mb-1.5">国家</label>
               <select v-model="nodeStore.selectedCountry"
-                class="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
+                class="w-full px-3 py-1.5 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
                 <option value="">所有国家</option>
                 <option v-for="country in nodeStore.filters.countries" :key="country" :value="country">
                   {{ country }}
@@ -134,7 +134,7 @@
           <!-- 清除过滤按钮 -->
           <button v-if="nodeStore.searchKeyword || nodeStore.selectedProtocol || nodeStore.selectedCountry"
             @click="nodeStore.clearFilters()"
-            class="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 text-sm font-bold rounded-lg transition">
+            class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-gray-300 text-sm font-bold rounded-lg transition">
             ✕ 清除过滤
           </button>
         </div>
