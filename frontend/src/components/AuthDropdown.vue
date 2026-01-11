@@ -5,22 +5,26 @@
     <button
       @click="isOpen = !isOpen"
       :class="[
-        'px-4 py-1.5 rounded-lg font-bold text-sm transition',
+        'px-4 py-1.5 rounded-lg font-bold text-sm transition flex items-center gap-2',
         !authStore.isAuthenticated
           ? 'bg-blue-600 hover:bg-blue-700 text-white'
-          : 'bg-purple-600 hover:bg-purple-700 text-white hidden sm:inline-block'
+          : 'bg-purple-600 hover:bg-purple-700 text-white'
       ]"
     >
-      {{ !authStore.isAuthenticated ? '🔐 登录' : '👤 账户' }}
-    </button>
-
-    <!-- 移动端账户按钮 -->
-    <button
-      v-if="authStore.isAuthenticated"
-      @click="isOpen = !isOpen"
-      class="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-lg transition sm:hidden"
-    >
-      👤 账户
+      <template v-if="!authStore.isAuthenticated">
+        🔐 登录
+      </template>
+      <template v-else>
+        <span class="text-xs text-gray-200">{{ authStore.displayName }}</span>
+        <div v-if="authStore.isVip"
+          class="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full text-xs font-bold border border-yellow-500/50">
+          ⭐ VIP
+        </div>
+        <div v-else
+          class="inline-flex items-center gap-1 bg-gray-500/20 text-gray-300 px-2 py-0.5 rounded-full text-xs font-bold border border-gray-500/50">
+          👤 用户
+        </div>
+      </template>
     </button>
 
     <!-- 下拉面板 -->

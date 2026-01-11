@@ -35,29 +35,6 @@
                 🏥 健康检测
               </button>
 
-              <!-- VIP 徽章 -->
-              <div v-if="authStore.isAuthenticated" class="hidden sm:flex items-center gap-2">
-                <span class="text-sm text-gray-300">{{ authStore.displayName }}</span>
-                <div v-if="authStore.isVip"
-                  class="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 px-2.5 py-1 rounded-full text-xs font-bold border border-yellow-500/50">
-                  ⭐ VIP
-                </div>
-                <div v-else
-                  class="inline-flex items-center gap-1 bg-gray-500/20 text-gray-300 px-2.5 py-1 rounded-full text-xs font-bold border border-gray-500/50">
-                  📌 用户
-                </div>
-              </div>
-
-              <!-- 同步状态 -->
-              <div :class="[
-                'px-3 py-1.5 rounded-full text-xs font-bold transition',
-                syncInfo.status === 'success'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
-                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
-              ]">
-                {{ syncStatusText }}
-              </div>
-
               <!-- 刷新按钮 -->
               <button @click="nodeStore.refreshNodes()" :disabled="nodeStore.isLoading"
                 class="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-lg transition disabled:opacity-50">
@@ -182,22 +159,6 @@ const showQRCodeModal = ref(false)
 const showTestModal = ref(false)
 const showHealthCheckModal = ref(false)
 const lastUpdateTime = ref('--:--')
-
-/**
- * 同步状态文本
- */
-const syncStatusText = computed(() => {
-  const status = nodeStore.syncInfo.status
-  if (status === 'success') return '✓ 数据同步正常'
-  if (status === 'syncing') return '⟳ 同步中...'
-  if (status === 'error') return '✗ 同步异常'
-  return '⟳ 同步状态检查中...'
-})
-
-/**
- * 获取同步信息
- */
-const syncInfo = computed(() => nodeStore.syncInfo)
 
 /**
  * 初始化应用
