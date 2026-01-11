@@ -28,3 +28,4 @@ dist/
 build/
 
 .github/workflows/update-nodes.yml
+.vscode/sftp.json
