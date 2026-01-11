@@ -1,4 +1,5 @@
-# viper-node-store - 节点数据管理和同步平台
+# viper-node-store - 节点数据管理和同步平台（模块化架构）
+# 入口: python backend/main.py
 # ================================
 
 # FastAPI框架
@@ -23,4 +24,5 @@ aiodns>=3.1.0
 
 # JSON和数据处理
 python-json-logger>=2.0.0
+
 

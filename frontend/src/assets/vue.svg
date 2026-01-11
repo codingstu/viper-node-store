@@ -1,1 +1,78 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="37.07" height="36" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 198"><path fill="#41B883" d="M204.8 0H256L128 220.8L0 0h97.92L128 51.2L157.44 0h47.36Z"></path><path fill="#41B883" d="m0 0l128 220.8L256 0h-51.2L128 132.48L50.56 0H0Z"></path><path fill="#35495E" d="M50.56 0L128 133.12L204.8 0h-47.36L128 51.2L97.92 0H50.56Z"></path></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="networkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="nodeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a8edea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fed6e3;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 背景圆形 -->
+  <circle cx="128" cy="128" r="120" fill="url(#networkGradient)" opacity="0.1"/>
+
+  <!-- 中心节点 -->
+  <circle cx="128" cy="128" r="25" fill="url(#nodeGradient)">
+    <animate attributeName="r" values="25;30;25" dur="2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- 外围节点 -->
+  <circle cx="70" cy="70" r="12" fill="url(#nodeGradient)" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="186" cy="70" r="12" fill="url(#nodeGradient)" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite" begin="0.3s"/>
+  </circle>
+  <circle cx="70" cy="186" r="12" fill="url(#nodeGradient)" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite" begin="0.6s"/>
+  </circle>
+  <circle cx="186" cy="186" r="12" fill="url(#nodeGradient)" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite" begin="0.9s"/>
+  </circle>
+
+  <!-- 连接线 -->
+  <line x1="128" y1="128" x2="70" y2="70" stroke="url(#connectionGradient)" stroke-width="3" opacity="0.7">
+    <animate attributeName="stroke-width" values="3;5;3" dur="2s" repeatCount="indefinite"/>
+  </line>
+  <line x1="128" y1="128" x2="186" y2="70" stroke="url(#connectionGradient)" stroke-width="3" opacity="0.7">
+    <animate attributeName="stroke-width" values="3;5;3" dur="2s" repeatCount="indefinite" begin="0.3s"/>
+  </line>
+  <line x1="128" y1="128" x2="70" y2="186" stroke="url(#connectionGradient)" stroke-width="3" opacity="0.7">
+    <animate attributeName="stroke-width" values="3;5;3" dur="2s" repeatCount="indefinite" begin="0.6s"/>
+  </line>
+  <line x1="128" y1="128" x2="186" y2="186" stroke="url(#connectionGradient)" stroke-width="3" opacity="0.7">
+    <animate attributeName="stroke-width" values="3;5;3" dur="2s" repeatCount="indefinite" begin="0.9s"/>
+  </line>
+
+  <!-- 数据流粒子 -->
+  <circle cx="128" cy="128" r="3" fill="#ffffff" opacity="0.9">
+    <animateMotion dur="3s" repeatCount="indefinite">
+      <path d="M 0 0 L 58 -58"/>
+    </animateMotion>
+  </circle>
+  <circle cx="128" cy="128" r="2" fill="#ffffff" opacity="0.8">
+    <animateMotion dur="3s" repeatCount="indefinite" begin="1s">
+      <path d="M 0 0 L -58 -58"/>
+    </animateMotion>
+  </circle>
+  <circle cx="128" cy="128" r="2.5" fill="#ffffff" opacity="0.7">
+    <animateMotion dur="3s" repeatCount="indefinite" begin="2s">
+      <path d="M 0 0 L 58 58"/>
+    </animateMotion>
+  </circle>
+
+  <!-- 外围装饰环 -->
+  <circle cx="128" cy="128" r="100" fill="none" stroke="url(#networkGradient)" stroke-width="2" opacity="0.3" stroke-dasharray="10,5">
+    <animateTransform attributeName="transform" type="rotate" values="0 128 128;360 128 128" dur="20s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- 标题文字 -->
+  <text x="128" y="220" text-anchor="middle" fill="url(#nodeGradient)" font-family="Arial, sans-serif" font-size="16" font-weight="bold">VIPER NETWORK</text>
+</svg>
