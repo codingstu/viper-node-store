@@ -96,7 +96,7 @@
           <!-- 搜索框 -->
           <div class="relative">
             <input v-model="nodeStore.searchKeyword" type="text" placeholder="🔍 搜索节点名称、地址、国家..."
-              class="w-full px-4 py-1.5 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition" />
+              class="w-full px-4 py-1 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition" />
           </div>
 
           <!-- 过滤器 -->
