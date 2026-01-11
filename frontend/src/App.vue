@@ -17,7 +17,9 @@
               <span class="text-3xl">🐍</span>
               <div>
                 <!-- <h1 class="text-2xl font-bold text-white">Viper Node Store</h1> -->
-                <p class="text-xs text-gray-400">节点管理和测速平台</p>
+                <h1 class="font-black text-xl text-white tracking-widest uppercase italic">
+                  萤火云 <span class="text-emerald-500 neon-text">全球节点</span>
+                </h1>
               </div>
             </div>
 
@@ -27,43 +29,38 @@
               <ManualRefreshButton />
 
               <!-- 健康检测按钮 -->
-              <button
-                @click="showHealthCheckModal = true"
+              <button @click="showHealthCheckModal = true"
                 class="px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-sm font-bold rounded-lg border border-emerald-500/50 transition"
-                title="检测所有节点的健康状态"
-              >
+                title="检测所有节点的健康状态">
                 🏥 健康检测
               </button>
 
               <!-- VIP 徽章 -->
               <div v-if="authStore.isAuthenticated" class="hidden sm:flex items-center gap-2">
                 <span class="text-sm text-gray-300">{{ authStore.displayName }}</span>
-                <div v-if="authStore.isVip" class="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 px-2.5 py-1 rounded-full text-xs font-bold border border-yellow-500/50">
+                <div v-if="authStore.isVip"
+                  class="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 px-2.5 py-1 rounded-full text-xs font-bold border border-yellow-500/50">
                   ⭐ VIP
                 </div>
-                <div v-else class="inline-flex items-center gap-1 bg-gray-500/20 text-gray-300 px-2.5 py-1 rounded-full text-xs font-bold border border-gray-500/50">
+                <div v-else
+                  class="inline-flex items-center gap-1 bg-gray-500/20 text-gray-300 px-2.5 py-1 rounded-full text-xs font-bold border border-gray-500/50">
                   📌 用户
                 </div>
               </div>
 
               <!-- 同步状态 -->
-              <div
-                :class="[
-                  'px-3 py-1.5 rounded-full text-xs font-bold transition',
-                  syncInfo.status === 'success'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
-                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
-                ]"
-              >
+              <div :class="[
+                'px-3 py-1.5 rounded-full text-xs font-bold transition',
+                syncInfo.status === 'success'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
+              ]">
                 {{ syncStatusText }}
               </div>
 
               <!-- 刷新按钮 -->
-              <button
-                @click="nodeStore.refreshNodes()"
-                :disabled="nodeStore.isLoading"
-                class="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-lg transition disabled:opacity-50"
-              >
+              <button @click="nodeStore.refreshNodes()" :disabled="nodeStore.isLoading"
+                class="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-lg transition disabled:opacity-50">
                 {{ nodeStore.isLoading ? '加载中...' : '🔄 刷新' }}
               </button>
 
@@ -81,7 +78,8 @@
             <p class="text-[10px] text-gray-400">总节点数</p>
             <p class="text-2xl font-bold text-purple-300 mt-0.5">{{ nodeStore.nodeCount }}</p>
           </div>
-          <div class="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-2 rounded-xl border border-emerald-500/20">
+          <div
+            class="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-2 rounded-xl border border-emerald-500/20">
             <p class="text-[10px] text-gray-400">健康节点</p>
             <p class="text-2xl font-bold text-emerald-300 mt-0.5">{{ nodeStore.healthyNodeCount }}</p>
           </div>
@@ -102,12 +100,8 @@
         <div class="space-y-4">
           <!-- 搜索框 -->
           <div class="relative">
-            <input
-              v-model="nodeStore.searchKeyword"
-              type="text"
-              placeholder="🔍 搜索节点名称、地址、国家..."
-              class="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition"
-            />
+            <input v-model="nodeStore.searchKeyword" type="text" placeholder="🔍 搜索节点名称、地址、国家..."
+              class="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition" />
           </div>
 
           <!-- 过滤器 -->
@@ -115,10 +109,8 @@
             <!-- 协议过滤 -->
             <div>
               <label class="block text-xs text-gray-400 mb-2">协议</label>
-              <select
-                v-model="nodeStore.selectedProtocol"
-                class="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition"
-              >
+              <select v-model="nodeStore.selectedProtocol"
+                class="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
                 <option value="">所有协议</option>
                 <option v-for="protocol in nodeStore.filters.protocols" :key="protocol" :value="protocol">
                   {{ protocol }}
@@ -129,10 +121,8 @@
             <!-- 国家过滤 -->
             <div>
               <label class="block text-xs text-gray-400 mb-2">国家</label>
-              <select
-                v-model="nodeStore.selectedCountry"
-                class="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition"
-              >
+              <select v-model="nodeStore.selectedCountry"
+                class="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 transition">
                 <option value="">所有国家</option>
                 <option v-for="country in nodeStore.filters.countries" :key="country" :value="country">
                   {{ country }}
@@ -142,11 +132,9 @@
           </div>
 
           <!-- 清除过滤按钮 -->
-          <button
-            v-if="nodeStore.searchKeyword || nodeStore.selectedProtocol || nodeStore.selectedCountry"
+          <button v-if="nodeStore.searchKeyword || nodeStore.selectedProtocol || nodeStore.selectedCountry"
             @click="nodeStore.clearFilters()"
-            class="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 text-sm font-bold rounded-lg transition"
-          >
+            class="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 text-sm font-bold rounded-lg transition">
             ✕ 清除过滤
           </button>
         </div>
@@ -163,40 +151,23 @@
         </div>
 
         <div v-else class="node-grid">
-          <NodeCard
-            v-for="node in nodeStore.displayedNodes"
-            :key="node.id"
-            :node="node"
+          <NodeCard v-for="node in nodeStore.displayedNodes" :key="node.id" :node="node"
             @show-qrcode="selectedNode = node; showQRCodeModal = true"
-            @show-precision-test="selectedNode = node; showTestModal = true"
-          />
+            @show-precision-test="selectedNode = node; showTestModal = true" />
         </div>
       </section>
     </div>
 
     <!-- 二维码弹窗 -->
-    <QRCodeModal
-      v-if="selectedNode"
-      :node="selectedNode"
-      :show="showQRCodeModal"
-      @close="showQRCodeModal = false"
-    />
+    <QRCodeModal v-if="selectedNode" :node="selectedNode" :show="showQRCodeModal" @close="showQRCodeModal = false" />
 
     <!-- 精确测速弹窗 -->
-    <PrecisionTestModal
-      v-if="selectedNode"
-      :node="selectedNode"
-      :show="showTestModal"
-      @close="showTestModal = false"
-      @test-complete="handleTestComplete"
-    />
+    <PrecisionTestModal v-if="selectedNode" :node="selectedNode" :show="showTestModal" @close="showTestModal = false"
+      @test-complete="handleTestComplete" />
 
     <!-- 健康检测弹窗 -->
-    <HealthCheckModal
-      :show="showHealthCheckModal"
-      @close="showHealthCheckModal = false"
-      @complete="handleHealthCheckComplete"
-    />
+    <HealthCheckModal :show="showHealthCheckModal" @close="showHealthCheckModal = false"
+      @complete="handleHealthCheckComplete" />
   </div>
 </template>
 
@@ -245,7 +216,7 @@ onMounted(async () => {
   // 再初始化节点数据
   await nodeStore.init()
   updateLastUpdateTime()
-  
+
   // 每12分钟刷新一次同步状态（与后端Supabase拉取同步）
   setInterval(async () => {
     await nodeStore.refreshNodes()
@@ -258,9 +229,9 @@ onMounted(async () => {
  */
 function updateLastUpdateTime() {
   const now = new Date()
-  lastUpdateTime.value = now.toLocaleTimeString('zh-CN', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  lastUpdateTime.value = now.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
 
@@ -327,7 +298,7 @@ function handleLoginSuccess() {
   gap: 1rem;
 }
 
-.node-grid > * {
+.node-grid>* {
   content-visibility: auto;
   contain-intrinsic-size: 340px 450px;
 }
