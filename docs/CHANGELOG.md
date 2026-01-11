@@ -3,6 +3,57 @@
 记录所有优化、修复和改进，每次迭代时更新。
 
 ---
+
+## 🐛 2026-01-11 - 生产环境 API 404 错误诊断和排查指南
+
+### 问题描述
+- **症状**: 线上前端请求 `GET /api/nodes` 和 `GET /api/sync-info` 返回 404
+- **环境**: 部署在 `node.peachx.tech`
+- **错误**: `Error: HTTP 404` 当请求后端 API 时
+
+### 代码审查结果
+✅ **代码本身没有问题**：
+- 所有路由正确定义在 `backend/api/routes.py`
+- 路由正确注册在 `backend/main.py` 中
+- CORS 中间件已配置允许所有来源
+- 相对导入已修复（从 `from backend.x` 改为 `from .x`）
+
+### 最可能的原因（按优先级）
+1. **后端服务未启动或已宕机** - 最常见原因
+2. **环境变量未配置** - Supabase 连接失败导致应用崩溃
+3. **导入路径错误** - 未从项目根目录启动
+4. **反向代理配置问题** - Nginx 转发不正确
+5. **防火墙/安全组** - 端口未开放
+
+### 快速排查步骤
+```bash
+# 1. 检查后端进程
+ps aux | grep python
+
+# 2. 如果无进程，启动后端
+cd /path/to/viper-node-store
+python backend/main.py
+
+# 3. 本地测试 API
+curl http://localhost:8002/api/status
+
+# 4. 查看启动日志
+tail -f backend.log
+```
+
+### 详细诊断文档
+- 📖 查看 `docs/API_404_TROUBLESHOOTING.md` - 完整诊断指南
+- 📖 查看 `docs/DEPLOYMENT_TROUBLESHOOTING.md` - 部署常见问题
+- 📖 查看 `docs/PROJECT_STRUCTURE.md` - 项目架构说明
+
+### 推荐的生产部署方案
+- 使用 Systemd Service 管理后端进程
+- 设置环境变量管理敏感配置
+- 配置日志轮转防止日志文件过大
+- 使用 Nginx 反向代理和负载均衡
+- 启用进程监控和自动重启
+
+---
 ## 📝 2026-01-11 - Git 提交记录
 
 ### 版本控制
