@@ -25,9 +25,6 @@
 
             <!-- 右侧操作区 -->
             <div class="flex items-center gap-4">
-              <!-- 手动刷新按钮 -->
-              <ManualRefreshButton />
-
               <!-- 健康检测按钮 -->
               <button @click="showHealthCheckModal = true"
                 class="px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-sm font-bold rounded-lg border border-emerald-500/50 transition"
@@ -150,7 +147,6 @@ import QRCodeModal from './components/QRCodeModal.vue'
 import PrecisionTestModal from './components/PrecisionTestModal.vue'
 import HealthCheckModal from './components/HealthCheckModal.vue'
 import AuthDropdown from './components/AuthDropdown.vue'
-import ManualRefreshButton from './components/ManualRefreshButton.vue'
 
 const nodeStore = useNodeStore()
 const authStore = useAuthStore()
