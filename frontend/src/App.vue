@@ -72,25 +72,20 @@
       </header>
 
       <!-- 统计信息 -->
-      <section class="max-w-7xl mx-auto px-4 py-2">
+      <section class="max-w-7xl mx-auto px-4 py-1">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div class="bg-gradient-to-br from-purple-500/10 to-purple-500/5 p-1.5 rounded-xl border border-purple-500/20">
-            <p class="text-[10px] text-gray-400">总节点数</p>
-            <p class="text-xl font-bold text-purple-300 mt-0.5">{{ nodeStore.nodeCount }}</p>
+          <div class="bg-gradient-to-br from-purple-500/10 to-purple-500/5 px-2 py-1 rounded-xl border border-purple-500/20">
+            <p class="text-xs font-bold text-purple-300">总节点 {{ nodeStore.nodeCount }}个</p>
           </div>
           <div
-            class="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-1.5 rounded-xl border border-emerald-500/20">
-            <p class="text-[10px] text-gray-400">健康节点</p>
-            <p class="text-xl font-bold text-emerald-300 mt-0.5">{{ nodeStore.healthyNodeCount }}</p>
+            class="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 px-2 py-1 rounded-xl border border-emerald-500/20">
+            <p class="text-xs font-bold text-emerald-300">健康 {{ nodeStore.healthyNodeCount }}个</p>
           </div>
-          <div class="bg-gradient-to-br from-blue-500/10 to-blue-500/5 p-1.5 rounded-xl border border-blue-500/20">
-            <p class="text-[10px] text-gray-400">平均速度</p>
-            <p class="text-xl font-bold text-blue-300 mt-0.5">{{ nodeStore.avgSpeed }}</p>
-            <p class="text-[10px] text-gray-500">MB/s</p>
+          <div class="bg-gradient-to-br from-blue-500/10 to-blue-500/5 px-2 py-1 rounded-xl border border-blue-500/20">
+            <p class="text-xs font-bold text-blue-300">平均 {{ nodeStore.avgSpeed }} MB/s</p>
           </div>
-          <div class="bg-gradient-to-br from-pink-500/10 to-pink-500/5 p-1.5 rounded-xl border border-pink-500/20">
-            <p class="text-[10px] text-gray-400">最后更新</p>
-            <p class="text-xs font-bold text-pink-300 mt-0.5">{{ lastUpdateTime }}</p>
+          <div class="bg-gradient-to-br from-pink-500/10 to-pink-500/5 px-2 py-1 rounded-xl border border-pink-500/20">
+            <p class="text-xs font-bold text-pink-300">更新 {{ lastUpdateTime }}</p>
           </div>
         </div>
       </section>
