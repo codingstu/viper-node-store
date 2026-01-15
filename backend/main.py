@@ -171,14 +171,18 @@ async def shutdown_event():
 
 if __name__ == "__main__":
     import uvicorn
+    import sys
     
     logger.info("=" * 60)
     logger.info("启动 viper-node-store 后端服务")
     logger.info(f"监听地址: {config.HOST}:{config.PORT}")
     logger.info("=" * 60)
     
+    # 支持两种启动方式：
+    # 1. python -m backend.main
+    # 2. python backend/main.py (需要在项目根目录)
     uvicorn.run(
-        "backend.main:app",
+        app,
         host=config.HOST,
         port=config.PORT,
         reload=config.RELOAD,

@@ -17,6 +17,7 @@ export const useNodeStore = defineStore('nodes', () => {
   const selectedProtocol = ref('')
   const selectedCountry = ref('')
   const syncInfo = ref({ status: 'unknown', message: '初始化中...' })
+  const dataSource = ref('china') // 数据源：'china' (大陆) 或 'overseas' (海外)
 
   // ==================== 计算属性 ====================
   const displayedNodes = computed(() => {
@@ -88,11 +89,13 @@ export const useNodeStore = defineStore('nodes', () => {
       const authStore = useAuthStore()
       await authStore.init()
 
-      // 获取节点和同步信息
-      const [nodesList, syncData] = await Promise.all([
-        nodeApi.fetchNodes(),
-        nodeApi.fetchSyncInfo()
-      ])
+      // 根据当前数据源获取节点
+      const nodesList = dataSource.value === 'china' 
+        ? await nodeApi.fetchTelegramNodes()
+        : await nodeApi.fetchNodes()
+      
+      // 获取同步信息
+      const syncData = await nodeApi.fetchSyncInfo()
 
       nodes.value = nodesList
       allNodesBackup.value = JSON.parse(JSON.stringify(nodesList)) // 深拷贝
@@ -103,7 +106,8 @@ export const useNodeStore = defineStore('nodes', () => {
       const countries = [...new Set(nodesList.map(n => n.country))].sort()
       filters.value = { protocols, countries }
 
-      console.log(`✅ 已加载 ${nodesList.length} 个节点 (${authStore.isVip ? 'VIP用户看全部' : '非VIP用户只看20个'})`)
+      const sourceLabel = dataSource.value === 'china' ? '大陆' : '海外'
+      console.log(`✅ 已加载 ${nodesList.length} 个${sourceLabel}节点 (${authStore.isVip ? 'VIP用户看全部' : '非VIP用户只看20个'})`)
     } catch (error) {
       console.error('❌ 初始化失败:', error)
     } finally {
@@ -112,12 +116,16 @@ export const useNodeStore = defineStore('nodes', () => {
   }
 
   /**
-   * 刷新节点列表
+   * 刷新节点列表（根据当前数据源）
    */
   async function refreshNodes() {
     isLoading.value = true
     try {
-      const nodesList = await nodeApi.fetchNodes()
+      // 根据当前数据源获取节点
+      const nodesList = dataSource.value === 'china' 
+        ? await nodeApi.fetchTelegramNodes()
+        : await nodeApi.fetchNodes()
+      
       nodes.value = nodesList
       allNodesBackup.value = JSON.parse(JSON.stringify(nodesList))
       
@@ -126,12 +134,24 @@ export const useNodeStore = defineStore('nodes', () => {
       const countries = [...new Set(nodesList.map(n => n.country))].sort()
       filters.value = { protocols, countries }
       
-      console.log(`✅ 已刷新节点列表`)
+      const sourceLabel = dataSource.value === 'china' ? '大陆' : '海外'
+      console.log(`✅ 已刷新${sourceLabel}节点列表`)
     } catch (error) {
       console.error('❌ 刷新失败:', error)
     } finally {
       isLoading.value = false
     }
+  }
+
+  /**
+   * 切换数据源（大陆/海外）
+   */
+  async function switchDataSource(source) {
+    if (source === dataSource.value) return
+    
+    dataSource.value = source
+    clearFilters()
+    await refreshNodes()
   }
 
   /**
@@ -180,6 +200,7 @@ export const useNodeStore = defineStore('nodes', () => {
     selectedProtocol,
     selectedCountry,
     syncInfo,
+    dataSource,
 
     // 计算属性
     displayedNodes,
@@ -192,6 +213,7 @@ export const useNodeStore = defineStore('nodes', () => {
     // 方法
     init,
     refreshNodes,
+    switchDataSource,
     updateNodeSpeed,
     getNode,
     precisionTest,

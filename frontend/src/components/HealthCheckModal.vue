@@ -13,7 +13,9 @@
       <!-- 标题 -->
       <div class="flex items-center gap-2 mb-6">
         <span class="text-2xl">🏥</span>
-        <h2 class="text-2xl font-bold text-white">全局健康检测</h2>
+        <h2 class="text-2xl font-bold text-white">
+          {{ nodeStore.dataSource === 'china' ? '大陆节点' : '海外节点' }}健康检测
+        </h2>
       </div>
 
       <!-- 初始状态 -->
@@ -224,8 +226,8 @@ async function startHealthCheck() {
   try {
     currentStatus.value = '正在发起健康检测...'
 
-    // 调用后端 API 进行批量检测（检测所有节点）
-    const response = await healthCheckApi.checkAll()
+    // 调用后端 API 进行批量检测（传入当前数据源）
+    const response = await healthCheckApi.checkAll(nodeStore.dataSource)
 
     if (response.status === "success" && response.data) {
       const data = response.data

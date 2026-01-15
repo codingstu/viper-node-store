@@ -33,16 +33,16 @@ if ps aux | grep -E "python.*app_fastapi.py" | grep -v grep > /dev/null; then
 fi
 
 # 检查是否已有新版本进程运行
-if ps aux | grep -E "python.*backend/main.py" | grep -v grep > /dev/null; then
+if ps aux | grep -E "python.*-m backend" | grep -v grep > /dev/null; then
     echo "⚠️  检测到后端服务已在运行，先清理..."
-    pkill -9 -f "python.*backend/main.py" 2>/dev/null
+    pkill -9 -f "python.*backend" 2>/dev/null
     sleep 2
     echo "✅ 旧进程已清理"
 fi
 
-# 启动后端 - 使用新的模块化结构
+# 启动后端 - 使用新的模块化结构（必须用 python -m 来处理相对导入）
 echo "✅ 启动 FastAPI 服务..."
-python3 backend/main.py
+python3 -m backend.main
 
 sleep 3
 

@@ -56,16 +56,28 @@ class NodeService:
                     if resp.status == 200:
                         raw_nodes = await resp.json()
                         
+                        # 调试：打印返回数据的结构
+                        if raw_nodes and len(raw_nodes) > 0:
+                            logger.debug(f"首个节点数据结构: {list(raw_nodes[0].keys()) if isinstance(raw_nodes[0], dict) else type(raw_nodes[0])}")
+                        
                         # 解析节点数据
                         nodes = []
-                        for row in raw_nodes:
+                        for idx, row in enumerate(raw_nodes):
                             try:
+                                # 检查 row 是否为有效的字典
+                                if not isinstance(row, dict) or row is None:
+                                    logger.debug(f"第 {idx} 行数据无效: {type(row)}")
+                                    continue
+                                
                                 # content 字段是 JSONB，包含完整的节点信息
                                 node_content = row.get("content", {})
                                 if isinstance(node_content, str):
                                     node_content = json.loads(node_content)
+                                elif node_content is None:
+                                    node_content = {}
                                 
                                 # 组装节点对象
+                                latency = row.get("latency") or 9999
                                 node = {
                                     "id": row.get("id", ""),
                                     "protocol": node_content.get("protocol", ""),
@@ -76,7 +88,7 @@ class NodeService:
                                     "link": row.get("link", "") or node_content.get("link", ""),
                                     "is_free": row.get("is_free", False),
                                     "speed": row.get("speed", 0),
-                                    "latency": row.get("latency", 9999),
+                                    "latency": latency,
                                     "updated_at": row.get("updated_at"),
                                     "mainland_score": row.get("mainland_score", 0),
                                     "mainland_latency": row.get("mainland_latency", 9999),
@@ -85,14 +97,14 @@ class NodeService:
                                     "status": row.get("status", "online"),
                                     "last_health_check": row.get("last_health_check"),
                                     "health_latency": row.get("health_latency"),
-                                    "alive": row.get("latency", 9999) < 9999
+                                    "alive": latency < 9999
                                 }
                                 nodes.append(node)
                             except Exception as e:
-                                logger.warning(f"解析节点数据失败: {e}")
+                                logger.warning(f"解析第 {idx} 行节点数据失败: {e}, 数据类型: {type(row)}")
                                 continue
                         
-                        logger.info(f"✅ 从 Supabase 获取 {len(nodes)} 个节点")
+                        logger.info(f"✅ 从 Supabase 获取 {len(nodes)} 个节点（共 {len(raw_nodes)} 行数据）")
                         return nodes
                     else:
                         logger.error(f"❌ Supabase 返回错误: {resp.status}")
@@ -100,6 +112,99 @@ class NodeService:
                         
         except Exception as e:
             logger.error(f"❌ 获取 Supabase 节点失败: {e}")
+            return []
+    
+    async def get_telegram_nodes(
+        self,
+        limit: int = 500,
+        show_free: bool = True
+    ) -> List[Dict]:
+        """
+        从 Supabase 获取 telegram_nodes 数据（大陆用户节点）
+        
+        Args:
+            limit: 返回的最大节点数
+            show_free: 是否显示免费节点
+        
+        Returns:
+            节点列表
+        """
+        try:
+            # 构造 Supabase REST API 查询 URL
+            url = f"{config.SUPABASE_URL}/rest/v1/telegram_nodes?select=*&limit={limit}"
+            
+            # 添加过滤条件
+            if not show_free:
+                url += "&is_free=eq.false"
+            
+            headers = {
+                "apikey": config.SUPABASE_KEY,
+                "Authorization": f"Bearer {config.SUPABASE_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
+                    if resp.status == 200:
+                        raw_nodes = await resp.json()
+                        
+                        # 调试：打印返回数据的结构
+                        if raw_nodes and len(raw_nodes) > 0:
+                            logger.debug(f"首个 telegram 节点数据结构: {list(raw_nodes[0].keys()) if isinstance(raw_nodes[0], dict) else type(raw_nodes[0])}")
+                        
+                        # 解析节点数据（与 nodes 表格式一致）
+                        nodes = []
+                        for idx, row in enumerate(raw_nodes):
+                            try:
+                                # 检查 row 是否为有效的字典
+                                if not isinstance(row, dict) or row is None:
+                                    logger.debug(f"第 {idx} 行 telegram 数据无效: {type(row)}")
+                                    continue
+                                
+                                # content 字段是 JSONB，包含完整的节点信息
+                                node_content = row.get("content", {})
+                                if isinstance(node_content, str):
+                                    node_content = json.loads(node_content)
+                                elif node_content is None:
+                                    node_content = {}
+                                
+                                # 组装节点对象（与海外节点格式一致）
+                                latency = row.get("latency") or 9999
+                                node = {
+                                    "id": row.get("id", ""),
+                                    "protocol": node_content.get("protocol", ""),
+                                    "host": node_content.get("host", ""),
+                                    "port": node_content.get("port", 0),
+                                    "name": node_content.get("name", f"{node_content.get('host')}:{node_content.get('port')}"),
+                                    "country": row.get("country") or node_content.get("country", "UNK"),
+                                    "link": row.get("link", "") or node_content.get("link", ""),
+                                    "is_free": row.get("is_free", True),
+                                    "speed": row.get("speed", 0),
+                                    "latency": latency,
+                                    "updated_at": row.get("updated_at"),
+                                    "status": row.get("status", "online"),
+                                    "last_health_check": row.get("last_health_check"),
+                                    "quality_score": row.get("quality_score", 50),
+                                    "source_channel": row.get("source_channel"),
+                                    "alive": latency < 9999
+                                }
+                                nodes.append(node)
+                            except Exception as e:
+                                logger.warning(f"解析第 {idx} 行 telegram 节点数据失败: {e}, 数据类型: {type(row)}")
+                                continue
+                        
+                        logger.info(f"✅ 从 Supabase 获取 {len(nodes)} 个 telegram 节点（共 {len(raw_nodes)} 行数据）")
+                        return nodes
+                    else:
+                        logger.error(f"❌ Supabase telegram_nodes 返回错误: {resp.status}")
+                        return []
+                        
+        except Exception as e:
+            logger.error(f"❌ 获取 Supabase telegram 节点失败: {e}")
             return []
     
     async def get_sync_info(self) -> Dict:

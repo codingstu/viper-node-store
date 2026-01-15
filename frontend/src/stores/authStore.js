@@ -17,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
   // ==================== 状态 ====================
   const currentUser = ref(null)
   const isVip = ref(false)
+  const isAdmin = ref(false)
   const vipDate = ref(null)
   const isLoading = ref(false)
   const error = ref(null)
@@ -82,16 +83,17 @@ export const useAuthStore = defineStore('auth', () => {
       if (!user) {
         currentUser.value = null
         isVip.value = false
+        isAdmin.value = false
         vipDate.value = null
-        return { user: null, isVip: false }
+        return { user: null, isVip: false, isAdmin: false }
       }
 
       currentUser.value = user
 
-      // 查询 profiles 表获取 VIP 信息
+      // 查询 profiles 表获取 VIP 和管理员信息
       const { data, error: profileError } = await supabaseClient
         .from('profiles')
-        .select('vip_until')
+        .select('vip_until, is_admin')
         .eq('id', user.id)
         .maybeSingle()
 
@@ -102,13 +104,15 @@ export const useAuthStore = defineStore('auth', () => {
 
       const vipUntil = data?.vip_until
       const isVipNow = vipUntil && new Date(vipUntil) > new Date()
+      const isAdminNow = data?.is_admin === true
       
       isVip.value = isVipNow
+      isAdmin.value = isAdminNow
       vipDate.value = vipUntil
 
-      console.log(`✅ VIP 状态检查: ${isVipNow ? 'VIP' : 'FREE'}, 过期时间: ${vipUntil || 'N/A'}`)
+      console.log(`✅ 用户状态检查: VIP=${isVipNow ? 'VIP' : 'FREE'}, Admin=${isAdminNow}, 过期时间: ${vipUntil || 'N/A'}`)
       
-      return { user, isVip: isVipNow, vipDate: vipUntil }
+      return { user, isVip: isVipNow, isAdmin: isAdminNow, vipDate: vipUntil }
     } catch (e) {
       console.warn('❌ VIP 检查失败:', e)
       
@@ -311,6 +315,7 @@ export const useAuthStore = defineStore('auth', () => {
     // 状态
     currentUser,
     isVip,
+    isAdmin,
     vipDate,
     isLoading,
     error,

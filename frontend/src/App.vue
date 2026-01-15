@@ -23,19 +23,45 @@
               </div>
             </div>
 
+            <!-- 数据源切换 Tab -->
+            <div class="hidden md:flex items-center bg-white/5 rounded-lg p-1 border border-white/10">
+              <button 
+                @click="nodeStore.switchDataSource('china')"
+                :class="[
+                  'px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200',
+                  nodeStore.dataSource === 'china' 
+                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' 
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                ]"
+              >
+                🇨🇳 大陆节点
+              </button>
+              <button 
+                @click="nodeStore.switchDataSource('overseas')"
+                :class="[
+                  'px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200',
+                  nodeStore.dataSource === 'overseas' 
+                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                ]"
+              >
+                🌍 海外节点
+              </button>
+            </div>
+
             <!-- 右侧操作区 -->
             <div class="flex items-center gap-2 md:gap-4">
-              <!-- 健康检测按钮 -->
-              <button @click="showHealthCheckModal = true"
+              <!-- 健康检测按钮（仅管理员可见） -->
+              <button v-if="authStore.isAdmin" @click="showHealthCheckModal = true"
                 class="hidden md:flex px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-sm font-bold rounded-lg border border-emerald-500/50 transition items-center gap-1"
-                title="检测所有节点的健康状态">
+                title="检测所有节点的健康状态（管理员）">
                 🏥 <span>健康检测</span>
               </button>
 
-              <!-- 健康检测图标（移动端） -->
-              <button @click="showHealthCheckModal = true"
+              <!-- 健康检测图标（移动端，仅管理员可见） -->
+              <button v-if="authStore.isAdmin" @click="showHealthCheckModal = true"
                 class="md:hidden px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-lg rounded-lg border border-emerald-500/50 transition"
-                title="检测所有节点的健康状态">
+                title="检测所有节点的健康状态（管理员）">
                 🏥
               </button>
 
@@ -61,6 +87,32 @@
 
       <!-- 统计信息 -->
       <section class="max-w-7xl mx-auto px-4 py-1">
+        <!-- 移动端数据源切换 -->
+        <div class="md:hidden flex items-center justify-center mb-3 bg-white/5 rounded-lg p-1 border border-white/10">
+          <button 
+            @click="nodeStore.switchDataSource('china')"
+            :class="[
+              'flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200',
+              nodeStore.dataSource === 'china' 
+                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' 
+                : 'text-gray-400 hover:text-white hover:bg-white/10'
+            ]"
+          >
+            🇨🇳 大陆节点
+          </button>
+          <button 
+            @click="nodeStore.switchDataSource('overseas')"
+            :class="[
+              'flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200',
+              nodeStore.dataSource === 'overseas' 
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                : 'text-gray-400 hover:text-white hover:bg-white/10'
+            ]"
+          >
+            🌍 海外节点
+          </button>
+        </div>
+        
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div class="bg-gradient-to-br from-purple-500/10 to-purple-500/5 px-2 py-1 rounded-xl border border-purple-500/20">
             <p class="text-xs font-bold text-purple-300">总节点 {{ nodeStore.nodeCount }}个</p>

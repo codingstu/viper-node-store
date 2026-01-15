@@ -14,6 +14,31 @@ from ..core.logger import logger
 class AuthService:
     """认证和授权业务逻辑"""
     
+    async def check_user_admin_status(self, user_id: Optional[str]) -> bool:
+        """
+        检查用户是否是管理员
+        
+        Args:
+            user_id: Supabase 用户 ID
+        
+        Returns:
+            True 如果是管理员，False 如果不是
+        """
+        if not user_id:
+            return False
+        
+        try:
+            supabase_client = supabase.create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
+            result = supabase_client.table("profiles").select("is_admin").eq("id", user_id).execute()
+            
+            if result.data and len(result.data) > 0:
+                return result.data[0].get("is_admin", False) == True
+            return False
+            
+        except Exception as e:
+            logger.warning(f"⚠️  检查管理员状态失败: {e}")
+            return False
+    
     async def check_user_vip_status(self, user_id: Optional[str]) -> bool:
         """
         检查用户是否是 VIP

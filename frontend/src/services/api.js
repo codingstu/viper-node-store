@@ -22,7 +22,7 @@ function getUserId() {
 
 export const nodeApi = {
   /**
-   * 获取所有节点
+   * 获取所有节点（海外用户节点）
    */
   async fetchNodes() {
     try {
@@ -40,7 +40,7 @@ export const nodeApi = {
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       let nodes = await response.json()
       
-      console.log('📦 获取节点数据，示例节点:', nodes.length > 0 ? nodes[0] : 'empty')
+      console.log('📦 获取海外节点数据，示例节点:', nodes.length > 0 ? nodes[0] : 'empty')
       
       // 规范化数据格式
       nodes = nodes.map(node => ({
@@ -62,7 +62,54 @@ export const nodeApi = {
       
       return nodes
     } catch (error) {
-      console.error('❌ 获取节点失败:', error)
+      console.error('❌ 获取海外节点失败:', error)
+      return []
+    }
+  },
+
+  /**
+   * 获取大陆节点（Telegram 节点）
+   */
+  async fetchTelegramNodes() {
+    try {
+      const userId = getUserId()
+      const headers = {
+        'Content-Type': 'application/json'
+      }
+      
+      // 如果获取到了用户ID，在header中发送
+      if (userId) {
+        headers['X-User-ID'] = userId
+      }
+      
+      const response = await fetch(`${VIPER_API_BASE}/telegram-nodes`, { headers })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      let nodes = await response.json()
+      
+      console.log('📦 获取大陆节点数据，示例节点:', nodes.length > 0 ? nodes[0] : 'empty')
+      
+      // 规范化数据格式（与海外节点保持一致）
+      nodes = nodes.map(node => ({
+        id: node.id || `${node.host}:${node.port}`,
+        protocol: node.protocol || 'unknown',
+        host: node.host,
+        port: node.port,
+        name: node.name || `${node.host}:${node.port}`,
+        country: node.country || 'Unknown',
+        link: node.link || '',
+        speed: Number(node.speed) || 0,
+        latency: Number(node.latency) || 0,
+        updated_at: node.updated_at || new Date().toISOString(),
+        is_free: node.is_free !== false,
+        status: node.status || 'online',
+        last_health_check: node.last_health_check || null,
+        quality_score: node.quality_score || 50,
+        source_channel: node.source_channel || null
+      }))
+      
+      return nodes
+    } catch (error) {
+      console.error('❌ 获取大陆节点失败:', error)
       return []
     }
   },
@@ -160,14 +207,28 @@ export const nodeApi = {
  */
 export const healthCheckApi = {
   /**
-   * 检测所有节点的健康状态
+   * 检测所有节点的健康状态（仅限管理员）
+   * @param {string} source - 数据源: 'overseas' 或 'china'
    */
-  async checkAll() {
+  async checkAll(source = 'overseas') {
     try {
+      const userId = getUserId()
+      const headers = {
+        'Content-Type': 'application/json'
+      }
+      
+      // 发送用户ID用于权限验证
+      if (userId) {
+        headers['X-User-ID'] = userId
+      }
+      
       const response = await fetch(`${VIPER_API_BASE}/health-check`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ check_all: true })
+        headers,
+        body: JSON.stringify({ 
+          check_all: true,
+          source: source
+        })
       })
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`)

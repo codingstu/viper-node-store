@@ -51,7 +51,7 @@ async def get_nodes(
     user_id: Optional[str] = Header(None, alias="X-User-ID")
 ):
     """
-    获取节点列表（从 Supabase）
+    获取节点列表（从 Supabase）- 海外用户节点
     
     安全特性：
     - VIP 用户可获取最多 500 个节点
@@ -75,7 +75,7 @@ async def get_nodes(
             if not is_vip and limit > config.DEFAULT_NODE_LIMIT:
                 limit = config.DEFAULT_NODE_LIMIT
         
-        logger.info(f"📋 获取节点: VIP={is_vip}, limit={limit}, user_id={user_id or '(anonymous)'}")
+        logger.info(f"📋 获取海外节点: VIP={is_vip}, limit={limit}, user_id={user_id or '(anonymous)'}")
         
         nodes = await node_service.get_nodes(
             limit=limit,
@@ -86,6 +86,48 @@ async def get_nodes(
         
     except Exception as e:
         logger.error(f"❌ 获取节点失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/telegram-nodes")
+async def get_telegram_nodes(
+    limit: int = Query(None, ge=1, le=config.MAX_NODE_LIMIT),
+    show_free: bool = Query(True),
+    user_id: Optional[str] = Header(None, alias="X-User-ID")
+):
+    """
+    获取 Telegram 节点列表（从 Supabase telegram_nodes 表）- 大陆用户节点
+    
+    安全特性：
+    - VIP 用户可获取最多 500 个节点
+    - 非 VIP 用户最多获取 20 个节点
+    - 限制在服务器端实现，无法被前端绕过
+    
+    Parameters:
+    - limit: 返回节点数量限制（1-500，可选）
+    - show_free: 是否显示免费节点
+    - X-User-ID: 用户ID（HTTP header）
+    """
+    try:
+        # 检查用户 VIP 状态
+        is_vip = await auth_service.check_user_vip_status(user_id)
+        
+        # 确定返回的节点数量
+        if limit is None:
+            limit = config.VIP_NODE_LIMIT if is_vip else config.DEFAULT_NODE_LIMIT
+        else:
+            if not is_vip and limit > config.DEFAULT_NODE_LIMIT:
+                limit = config.DEFAULT_NODE_LIMIT
+        
+        logger.info(f"📋 获取大陆节点: VIP={is_vip}, limit={limit}, user_id={user_id or '(anonymous)'}")
+        
+        nodes = await node_service.get_telegram_nodes(
+            limit=limit,
+            show_free=show_free
+        )
+        return nodes
+        
+    except Exception as e:
+        logger.error(f"❌ 获取 telegram 节点失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== 同步信息 API ====================
@@ -332,19 +374,39 @@ async def redeem_code(request: RedeemCodeRequest):
 # ==================== 健康检测 API ====================
 
 @router.post("/health-check")
-async def trigger_health_check(request: HealthCheckRequest = None):
+async def trigger_health_check(
+    request: HealthCheckRequest = None,
+    user_id: Optional[str] = Header(None, alias="X-User-ID")
+):
     """
-    手动触发节点健康检测
+    手动触发节点健康检测（仅限管理员）
     
     由前端「🏥 健康检测」按钮调用
     每次检测一批节点，更新其在线状态到数据库
+    
+    Parameters:
+    - X-User-ID: 用户ID（HTTP header，必须是管理员）
     """
     try:
-        batch_size = request.batch_size if request else 100
-        logger.info(f"🏥 收到健康检测请求 (batch_size={batch_size})")
+        # 验证管理员权限
+        is_admin = await auth_service.check_user_admin_status(user_id)
+        if not is_admin:
+            logger.warning(f"⚠️ 非管理员尝试执行健康检测: user_id={user_id}")
+            return {
+                "status": "error",
+                "message": "无权限：仅管理员可执行健康检测",
+                "timestamp": datetime.now().isoformat()
+            }
         
-        # 获取节点
-        nodes = await node_service.get_nodes(limit=batch_size)
+        batch_size = request.batch_size if request else 100
+        source = request.source if request and hasattr(request, 'source') else "overseas"
+        logger.info(f"🏥 收到健康检测请求 (batch_size={batch_size}, source={source}, admin={user_id})")
+        
+        # 根据 source 获取对应的节点
+        if source == "china":
+            nodes = await node_service.get_telegram_nodes(limit=batch_size)
+        else:
+            nodes = await node_service.get_nodes(limit=batch_size)
         
         logger.info(f"✅ 获取到 {len(nodes)} 个节点")
         

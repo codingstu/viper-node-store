@@ -21,6 +21,7 @@ class LatencyTestRequest(BaseModel):
 class HealthCheckRequest(BaseModel):
     """健康检测请求模型"""
     batch_size: int = 50
+    source: str = "overseas"  # "overseas" 或 "china"
 
 
 class RedeemCodeRequest(BaseModel):
